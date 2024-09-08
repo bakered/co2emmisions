@@ -4,12 +4,12 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
-from pyodide.http import open_url
+#from pyodide.http import open_url
 from pathlib import Path
 
 
 
-def createCountryBubbleGraph(datapath='dataPlot1.csv', 
+def createCountryBubbleGraph(geographyLevel='countries', 
                              x_var = 'gdp_per_capita', 
                              y_var = 'co2_per_capita', 
                              size_var = 'co2', 
@@ -23,24 +23,29 @@ def createCountryBubbleGraph(datapath='dataPlot1.csv',
     
     
     # Import the data
-    #data = pd.read_csv(datapath)
+    #data = pd.read_csv("dataPlot2.csv")
     #data = pd.read_csv(open_url('https://github.com/bakered/co2emmisions/blob/main/src_shiny_app/dataPlot1.csv'))
-    
-    infile = Path(__file__).parent / "dataPlot1.csv"
+    if geographyLevel == "countries":
+        infile = Path(__file__).parent / "dataPlot1.csv"
+    else:
+        infile = Path(__file__).parent / "dataPlot2.csv"
     data = pd.read_csv(infile)
     
-    data.loc[data['ISO3'] == "NAM", 'ISO2'] = "NA"
-    data['year'] = data['year'].astype(int)
-    # create image link from ISO2
-    data['image_link'] = data['ISO2'].apply(lambda iso: f"https://hatscripts.github.io/circle-flags/flags/{iso.lower()}.svg")
-    data['geography'] = data['ISO3']
+    if geographyLevel == 'countries': 
+        data['year'] = data['year'].astype(int)
+        # create image link from ISO2
+        data['ISO2']= data['ISO2'].astype(str)
+        data['image_link'] = data['ISO2'].apply(lambda iso: f"https://hatscripts.github.io/circle-flags/flags/{iso.lower()}.svg")
+        data['geography'] = data['ISO3']
+    else:
+        data['geography'] = data['region2']
 
 
     # Filter the DataFrame based on the list of ISO3 codes
     plot_df = data[data['geography'].isin(geography_list)].copy()
-    
-    max_x = plot_df[x_var].max() * 1.1
-    max_y = plot_df[y_var].max() * 1.1
+
+    max_x = plot_df[x_var].max() * 1.2
+    max_y = plot_df[y_var].max() * 1.2
     if max_x>max_y:
         max_bubble_size_wanted = (max_x/10)*bubble_size
         print(max_bubble_size_wanted)
@@ -55,21 +60,47 @@ def createCountryBubbleGraph(datapath='dataPlot1.csv',
     # (warning: i think only works if x-axis is larger than y-axis)
     plot_df.loc[:, 'normalized_size'] *= (max_bubble_size_wanted / co2_max)
     
-    
+    #why is this here? 
     geographies = plot_df['geography'].unique()
     
-    # Create the base plot with Plotly Express
-    figScatter = px.scatter(
-        plot_df, 
-        x=x_var, 
-        y=y_var, 
-        size=size_var, 
-        hover_name='geography', 
-        animation_frame='year', 
-        size_max=60,
-        template="plotly_white"
+    if geographyLevel == "countries":
+        # Create the base plot with Plotly Express
+        figScatter = px.scatter(
+            plot_df, 
+            x=x_var, 
+            y=y_var, 
+            size=size_var, 
+            hover_name='geography',
+            animation_frame='year', 
+            size_max=60,
+            template="plotly_white"
+        )
+        figScatter.update_traces(marker=dict(opacity=0))  # Set opacity to 0 for invisibility
+    else:
+        # Create the base plot with Plotly Express
+        figScatter = px.scatter(
+            plot_df, 
+            x=x_var, 
+            y=y_var, 
+            color='geography',
+            size=size_var, 
+            text='geography',
+            hover_name='geography',
+            animation_frame='year', 
+            size_max=60,
+            template="plotly_white"
+        )
+        figScatter.update_traces(textposition='top right')
+    # following code does not work xxx
+    figScatter.update_traces(
+        customdata=plot_df[['geography', 'gdp']].values,
+        hovertemplate="<br>".join([
+            "<strong>%{customdata[0]}</strong><br>",
+            "GDP (millions): %{customdata[1]:,.0f}",
+            "<extra></extra>"  # Removes the trace name from hover
+    ])
     )
-    figScatter.update_traces(marker=dict(opacity=0))  # Set opacity to 0 for invisibility
+    
     
     if leave_trace:
       #  Loop over each year in the DataFrame
@@ -81,7 +112,8 @@ def createCountryBubbleGraph(datapath='dataPlot1.csv',
         # Append these rows to the list
         expanded_rows = pd.concat([expanded_rows, filtered_rows], axis=0, ignore_index=True)
     
-      # Create an animated line plot
+      
+    # Create an animated line plot
       figLine = px.line(
           expanded_rows, 
           x=x_var, 
@@ -120,75 +152,76 @@ def createCountryBubbleGraph(datapath='dataPlot1.csv',
     else:
       fig = figScatter
     
-    
-    # Add flags to each frame
-    for frame in fig.frames: #frame = fig.frames[19]
-      #print(frame.layout.images)
-      year = frame.name
-      #print(year)
-      # Filter data for the specific year
-      #if leave_trace:
-      #  year_data = plot_df[plot_df['year'] <= int(year)]
-      #  ## add in NA rows for missing data
-      #  full_years = list(range(1970, int(year)+1))
-      #  full_index = pd.MultiIndex.from_product([countries, full_years], names=['geography', 'year'])
-      #  year_data = year_data.set_index(['geography', 'year']).reindex(full_index).reset_index()
-      #else:
-      year_data = plot_df[plot_df['year'] == int(year)]
-      ## add in NA rows for missing data
-      full_index = pd.Index(geographies, name='geography')
-      year_data = year_data.set_index('geography').reindex(full_index).reset_index()
-        
       
-      
-      # Create list of image annotations for this year
-      image_annotations = []
-      for i, row in year_data.iterrows():
-        if pd.isna(row['image_link']):
-          image_annotations.append(
+    if geographyLevel == "countries":
+        # Add flags to each frame
+        for frame in fig.frames: #frame = fig.frames[19]
+          #print(frame.layout.images)
+          year = frame.name
+          #print(year)
+          # Filter data for the specific year
+          #if leave_trace:
+          #  year_data = plot_df[plot_df['year'] <= int(year)]
+          #  ## add in NA rows for missing data
+          #  full_years = list(range(1970, int(year)+1))
+          #  full_index = pd.MultiIndex.from_product([countries, full_years], names=['geography', 'year'])
+          #  year_data = year_data.set_index(['geography', 'year']).reindex(full_index).reset_index()
+          #else:
+          year_data = plot_df[plot_df['year'] == int(year)]
+          ## add in NA rows for missing data
+          full_index = pd.Index(geographies, name='geography')
+          year_data = year_data.set_index('geography').reindex(full_index).reset_index()
+            
+          
+          
+          # Create list of image annotations for this year
+          image_annotations = []
+          for i, row in year_data.iterrows():
+            if pd.isna(row['image_link']):
+              image_annotations.append(
+                    {
+                      'source': "https://hatscripts.github.io/circle-flags/flags/gb.svg",
+                      'xref': "x",
+                      'yref': "y",
+                      'x': 0,
+                      'y': 0,
+                      'sizex': 0,
+                      'sizey': 0,
+                      'xanchor': "center",
+                      'yanchor': "middle",
+                      'sizing': "contain",
+                      'opacity': 0.8,
+                      'layer': "above"
+                      }
+                    )
+            else:
+              image_annotations.append(
                 {
-                  'source': "https://hatscripts.github.io/circle-flags/flags/gb.svg",
-                  'xref': "x",
-                  'yref': "y",
-                  'x': 0,
-                  'y': 0,
-                  'sizex': 0,
-                  'sizey': 0,
-                  'xanchor': "center",
-                  'yanchor': "middle",
-                  'sizing': "contain",
-                  'opacity': 0.8,
-                  'layer': "above"
-                  }
-                )
-        else:
-          image_annotations.append(
-            {
-                    'source': row['image_link'],
-                    'xref': "x",
-                    'yref': "y",
-                    'x': row[x_var],
-                    'y': row[y_var],
-                    'sizex': row['normalized_size'],
-                    'sizey': row['normalized_size'],
-                    'xanchor': "center",
-                    'yanchor': "middle",
-                    'sizing': "contain",
-                    'opacity': 0.8,
-                    'layer': "above"
-                    }
-                )
-      # Update the layout of the frame to include the images
-      frame.layout.images = image_annotations
-      #print(frame.layout.images)
-      x_max = year_data[x_var].max() + max_bubble_size_wanted
-      y_max = year_data[y_var].max()  * 1.1
-      custom_xaxis = {'range': [0, x_max]}
-      custom_yaxis = {'range': [0, y_max]}
-      # Assign the custom axes to the frame's layout
-      # hashed out because makes plot jittery
-      # frame.layout.xaxis = custom_xaxis
-      # frame.layout.yaxis = custom_yaxis
+                        'source': row['image_link'],
+                        'xref': "x",
+                        'yref': "y",
+                        'x': row[x_var],
+                        'y': row[y_var],
+                        'sizex': row['normalized_size'],
+                        'sizey': row['normalized_size'],
+                        'xanchor': "center",
+                        'yanchor': "middle",
+                        'sizing': "contain",
+                        'opacity': 0.8,
+                        'layer': "above"
+                        }
+                    )
+          # Update the layout of the frame to include the images
+          frame.layout.images = image_annotations
+          #print(frame.layout.images)
+          x_max = year_data[x_var].max() + max_bubble_size_wanted
+          y_max = year_data[y_var].max()  * 1.1
+          custom_xaxis = {'range': [0, x_max]}
+          custom_yaxis = {'range': [0, y_max]}
+          # Assign the custom axes to the frame's layout
+          # hashed out because makes plot jittery
+          # frame.layout.xaxis = custom_xaxis
+          # frame.layout.yaxis = custom_yaxis
       
     
     # Adjust layout for better appearance

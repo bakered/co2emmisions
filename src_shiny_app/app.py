@@ -7,8 +7,7 @@ Created on Sun Sep  8 06:59:49 2024
 """
 
 
-from shiny import ui, render, App
-import numpy as np
+from shiny import ui, render, App, reactive
 from PlotlyPlot1 import createCountryBubbleGraph  # Import the function from the other file
 
 #from shinywidgets import output_widget, render_widget  
@@ -57,51 +56,82 @@ countries2 = [
 
 img_urls = [f'https://cdn.rawgit.com/lipis/flag-icon-css/master/flags/4x3/{country}.svg' for country in countries]
 
+regions = ["Africa", "Developing America", "Developing Asia", "developed (excluding eastern block)"]
 
-app_ui = ui.page_sidebar(
-    ui.sidebar(
-        ui.input_select(id="x_var", label="X Variable:", 
-                        choices={"co2": "CO2", "population": "Population", "gdp": "GDP", 
-                                 "gdp_per_capita": "GDP per Capita", "co2_per_capita": "CO2 per Capita"},
-                        selected="gdp_per_capita"),
-        
-        ui.input_select(id="y_var", label="Y Variable:", 
-                        choices={"co2": "CO2", "population": "Population", "gdp": "GDP", 
-                                 "gdp_per_capita": "GDP per Capita", "co2_per_capita": "CO2 per Capita"},
-                        selected="co2_per_capita"),
-        
-        ui.input_select(id="size_var", label="Size Variable:", 
-                        choices={"co2": "CO2", "population": "Population", "gdp": "GDP", 
-                                 "gdp_per_capita": "GDP per Capita", "co2_per_capita": "CO2 per Capita"},
-                        selected="co2"),
-        
-        ui.input_selectize(id="geography_list", label="Geography List:", 
-                           choices=countries2,
-                           multiple=True, 
-                           selected=["ARG", "AUS", "BRA", "CAN", "CHN", "FRA", "DEU", "IND", "IDN", 
-                                     "ITA", "JPN", "MEX", "RUS", "SAU", "ZAF", "KOR", "TUR", "GBR", "USA"]),
-        ui.input_numeric(id="bubble_size", label="Size bubble: (x times bigger)", min=0.01, max=100, value=1),
-        ui.input_checkbox(id="fixed_axes", label="Fixed Axes", value=True),
-        ui.input_checkbox(id="leave_trace", label="Leave Trace", value=True),
-        
-    ),
+app_ui = ui.page_fluid(
     ui.tags.style("""
-        .plot-container {
-            height: 700px;
+        .js-plotly-plot,
+        .plot-container,
+        .svg-container {
+          height: 85vh;
+          }
+        .sidebar {
+            width: 400px;  
         }
     """),
-    ui.output_ui("plot"),
-    #ui.output_ui("plot", class="plot-container"),
-    #ui.output_plot("plot"),
+     ui.layout_sidebar(
+            ui.sidebar(
+                ui.input_select(id="geographyLevel", label="Geography:", 
+                                choices={"countries": "Countries", "regions": "Regions"},
+                                selected="countries"),
+                ui.input_select(id="x_var", label="X Variable:", 
+                                choices={"co2": "CO2 (tonnes)", "population": "Population", "gdp": "GDP (millions)", 
+                                         "gdp_per_capita": "GDP per Capita", "co2_per_capita": "CO2 per Capita"},
+                                selected="gdp_per_capita"),
+                
+                ui.input_select(id="y_var", label="Y Variable:", 
+                                choices={"co2": "CO2 (tonnes)", "population": "Population", "gdp": "GDP (millions)", 
+                                         "gdp_per_capita": "GDP per Capita", "co2_per_capita": "CO2 per Capita"},
+                                selected="co2_per_capita"),
+                
+                ui.input_select(id="size_var", label="Size Variable:", 
+                                choices={"co2": "CO2", "population": "Population", "gdp": "GDP", 
+                                         "gdp_per_capita": "GDP per Capita", "co2_per_capita": "CO2 per Capita"},
+                                selected="co2"),
+                
+                ui.input_selectize(id="geography_list", label="Show country:", 
+                                   choices=countries2,
+                                   multiple=True, 
+                                   selected=["ARG", "AUS", "BRA", "CAN", "CHN", "FRA", "DEU", "IND", "IDN", 
+                                             "ITA", "JPN", "MEX", "RUS", "SAU", "ZAF", "KOR", "TUR", "GBR", "USA"]),
+                ui.input_numeric(id="bubble_size", label="Size bubble: (x times bigger)", min=0.01, max=100, value=1),
+                ui.input_checkbox(id="fixed_axes", label="Fixed Axes", value=True),
+                ui.input_checkbox(id="leave_trace", label="Leave Trace", value=True),
+                ),
+            ui.tags.style("""
+                          .sidebar {
+                              width: 600px;  /* Adjust width as needed */
+                              }
+                          """),
+            ui.card(
+                ui.output_ui("plot", fill=True)
+                ),
+            )
     )
 
-def server(input, output, session):
+def server(input, output, session):  
+    @reactive.Calc
+    def update_geography_list():
+        if input.geographyLevel() == "countries":
+            return [countries2, ["ARG", "AUS", "BRA", "CAN", "CHN", "FRA", "DEU", "IND", "IDN", 
+                      "ITA", "JPN", "MEX", "RUS", "SAU", "ZAF", "KOR", "TUR", "GBR", "USA"], "Show country:"]
+        else:
+            return [regions, regions, "Show region:"]
+        
+    @reactive.effect
+    def _():
+        choices, selected, label = update_geography_list()
+        ui.update_selectize("geography_list", choices=choices, selected=selected, label=label)
+       
+
+    
     @output
     #@render.plot
     #@render_widget
     @render.ui
     def plot():
         plot = createCountryBubbleGraph(
+            geographyLevel=input.geographyLevel(),
             x_var=input.x_var(),
             y_var=input.y_var(),
             size_var=input.size_var(),
@@ -111,6 +141,7 @@ def server(input, output, session):
             leave_trace=input.leave_trace()
         )
         return ui.HTML(plot.to_html(full_html=False))
+    
 
 
 app = App(ui=app_ui, server=server) 
