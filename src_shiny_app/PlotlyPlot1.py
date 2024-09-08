@@ -9,13 +9,13 @@ from pathlib import Path
 
 
 
-def createCountryBubbleGraph(datapath='https://github.com/bakered/co2emmisions/blob/main/src_shiny_app/dataPlot1.csv', 
+def createCountryBubbleGraph(datapath='dataPlot1.csv', 
                              x_var = 'gdp_per_capita', 
                              y_var = 'co2_per_capita', 
                              size_var = 'co2', 
                              leave_trace = True, 
                              fixed_axes = True,
-                             max_bubble_size_wanted= 6000,
+                             bubble_size= 1,
                              geography_list = [
                                  'ARG', 'AUS', 'BRA', 'CAN', 'CHN', 'FRA', 'DEU', 'IND', 'IDN', 
                                  'ITA', 'JPN', 'MEX', 'RUS', 'SAU', 'ZAF', 'KOR', 'TUR', 'GBR', 'USA'
@@ -41,15 +41,20 @@ def createCountryBubbleGraph(datapath='https://github.com/bakered/co2emmisions/b
     
     max_x = plot_df[x_var].max() * 1.1
     max_y = plot_df[y_var].max() * 1.1
-    #max_bubble_size_wanted = max_x/7.5
-    max_x = plot_df[x_var].max() + max_bubble_size_wanted
+    if max_x>max_y:
+        max_bubble_size_wanted = (max_x/10)*bubble_size
+        print(max_bubble_size_wanted)
+    else:
+        max_bubble_size_wanted = (max_y/5)*bubble_size
+    
     
     # Add normalized_size column such that the value is the diameter making 
     plot_df.loc[:, 'normalized_size'] = 2 * np.sqrt(plot_df[size_var] /3.141592653589793) 
     co2_max = plot_df['normalized_size'].max()
     # scale column such that the co2_max will be the size of the bubble you want measured in x-axis units. 
     # (warning: i think only works if x-axis is larger than y-axis)
-    plot_df.loc[:, 'normalized_size'] *= (max_bubble_size_wanted / co2_max)  # 3000000
+    plot_df.loc[:, 'normalized_size'] *= (max_bubble_size_wanted / co2_max)
+    
     
     geographies = plot_df['geography'].unique()
     
