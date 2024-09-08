@@ -5,31 +5,48 @@ Created on Sun Sep  8 06:59:49 2024
 
 @author: edbaker
 """
+import os
+
+# Get the current working directory
+current_directory = os.getcwd()
+
+# Print the current working directory
+print(f"Current working directory: {current_directory}")
 
 from shiny import ui, render, App
 import numpy as np
 import matplotlib.pyplot as plt
+from PlotlyPlot1 import createCountryBubbleGraph  # Import the function from the other file
+from shinywidgets import output_widget, render_widget  
 
 
 app_ui = ui.page_fluid(
-    ui.layout_sidebar(
-        ui.sidebar(
-            ui.h2("Page Charts"),
-            ui.hr(),
-            ui.input_slider(id="slider", label="Number of bins:", min=5, max=25, value=15),
-            #ui.output_plot(id="histogram")
-        ),
-        ui.output_plot(id="histogram")
-    )
+    ui.input_numeric(id="max_bubble_size_wanted", label="size bubble:", min=5, max=3000000, value=6000),
+    #output_widget("plot"), 
+    ui.output_ui("plot"),
 )
+
+#app_ui = ui.page_fluid(
+#    ui.layout_sidebar(
+#        ui.sidebar(
+#            ui.h2("Page Charts"),
+#            ui.hr(),
+#            ui.input_slider(id="slider", label="size bubble:", min=5, max=300000, value=100000),
+#            #ui.output_plot(id="histogram")
+#        ),
+#        ui.output_plot(id="plot")
+#    )
+#)
 
 def server(input, output, session):
     @output
-    @render.plot
-    def histogram():
-        x = 100 + np.random.randn(500)
-        plt.title("A histogram", size=20)
-        plt.hist(x=x, bins=input.slider(), color="grey", ec="black")
+    #@render.plot
+    #@render_widget
+    @render.ui
+    def plot():
+        print("input" + str(input.max_bubble_size_wanted()))
+        plot = createCountryBubbleGraph(max_bubble_size_wanted=input.max_bubble_size_wanted(), fixed_axes = True)  # 
+        return ui.HTML(plot.to_html())
 
 
 
