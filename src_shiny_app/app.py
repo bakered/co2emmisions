@@ -5,13 +5,7 @@ Created on Sun Sep  8 06:59:49 2024
 
 @author: edbaker
 """
-import os
 
-# Get the current working directory
-current_directory = os.getcwd()
-
-# Print the current working directory
-print(f"Current working directory: {current_directory}")
 
 from shiny import ui, render, App
 import numpy as np

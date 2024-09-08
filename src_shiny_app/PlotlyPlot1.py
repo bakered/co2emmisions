@@ -4,9 +4,12 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import numpy as np
+from pyodide.http import open_url
+from pathlib import Path
 
 
-def createCountryBubbleGraph(datapath='dataPlot1.csv', 
+
+def createCountryBubbleGraph(datapath='https://github.com/bakered/co2emmisions/blob/main/src_shiny_app/dataPlot1.csv', 
                              x_var = 'gdp_per_capita', 
                              y_var = 'co2_per_capita', 
                              size_var = 'co2', 
@@ -19,16 +22,13 @@ def createCountryBubbleGraph(datapath='dataPlot1.csv',
                              ]):
     
     
-    import os
-
-    # Get the current working directory
-    current_directory = os.getcwd()
-    
-    # Print the current working directory
-    print(f"Current working directory: {current_directory}")
-
     # Import the data
     #data = pd.read_csv(datapath)
+    #data = pd.read_csv(open_url('https://github.com/bakered/co2emmisions/blob/main/src_shiny_app/dataPlot1.csv'))
+    
+    infile = Path(__file__).parent / "dataPlot1.csv"
+    data = pd.read_csv(infile)
+    
     data.loc[data['ISO3'] == "NAM", 'ISO2'] = "NA"
     data['year'] = data['year'].astype(int)
     # create image link from ISO2
@@ -238,6 +238,6 @@ def createCountryBubbleGraph(datapath='dataPlot1.csv',
     print("plot created")
     return(fig)
     
-fig = createCountryBubbleGraph()    
+#fig = createCountryBubbleGraph()    
 # Save the figure as HTML
-fig.write_html('/Users/edbaker/UN_projects/c02emmisions/plotly_animation.html')
+#fig.write_html('/Users/edbaker/UN_projects/c02emmisions/plotly_animation.html')
