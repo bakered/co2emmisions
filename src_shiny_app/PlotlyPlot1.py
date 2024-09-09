@@ -12,14 +12,16 @@ from pathlib import Path
 def createCountryBubbleGraph(geographyLevel='countries', 
                              x_var = 'gdp_per_capita', 
                              y_var = 'co2_per_capita', 
-                             size_var = 'co2', 
+                             size_var = 'co2',
                              leave_trace = True, 
                              fixed_axes = True,
                              bubble_size= 1,
                              geography_list = [
                                  'ARG', 'AUS', 'BRA', 'CAN', 'CHN', 'FRA', 'DEU', 'IND', 'IDN', 
                                  'ITA', 'JPN', 'MEX', 'RUS', 'SAU', 'ZAF', 'KOR', 'TUR', 'GBR', 'USA'
-                             ]):
+                             ],
+                             x_log=False,
+                             y_log=False):
     
     
     # Import the data
@@ -46,6 +48,24 @@ def createCountryBubbleGraph(geographyLevel='countries',
 
     max_x = plot_df[x_var].max() * 1.2
     max_y = plot_df[y_var].max() * 1.2
+    min_x = plot_df[x_var].min() * 0.9
+    min_y = plot_df[y_var].min() * 0.9
+    # Calculate the range for logarithmic scale
+    if x_log:
+        max_x = np.log10(max_x) + np.log10(1.2)
+        min_x = min_x if min_x > 0 else 0.1
+        min_x = np.log10(min_x) - np.log10(1.2)
+    else:
+        min_x = 0
+    if y_log:
+        max_y = np.log10(max_y) + np.log10(1.2)
+        min_y = min_y if min_y > 0 else 0.1
+        min_y = np.log10(min_y) - np.log10(1.2)
+    else:
+        min_y = 0
+    
+    
+    
     if max_x>max_y:
         max_bubble_size_wanted = (max_x/10)*bubble_size
         print(max_bubble_size_wanted)
@@ -75,7 +95,9 @@ def createCountryBubbleGraph(geographyLevel='countries',
             size_max=60,
             template="plotly_white"
         )
-        figScatter.update_traces(marker=dict(opacity=0))  # Set opacity to 0 for invisibility
+        if not x_log and not y_log:
+            figScatter.update_traces(marker=dict(opacity=0))  # Set opacity to 0 for invisibility
+        
     else:
         # Create the base plot with Plotly Express
         figScatter = px.scatter(
@@ -91,6 +113,12 @@ def createCountryBubbleGraph(geographyLevel='countries',
             template="plotly_white"
         )
         figScatter.update_traces(textposition='top right')
+        
+    # add log axes
+    if x_log:
+        figScatter.update_xaxes(type="log")
+    if y_log:
+        figScatter.update_yaxes(type='log')
     # following code does not work xxx
     figScatter.update_traces(
         customdata=plot_df[['geography', 'gdp']].values,
@@ -124,6 +152,11 @@ def createCountryBubbleGraph(geographyLevel='countries',
           animation_frame='year', 
           template="plotly_white"
           )
+      # add log axes
+      if x_log:
+          figLine.update_xaxes(type="log")
+      if y_log:
+          figLine.update_yaxes(type='log')
       figLine.update_layout(
         legend=dict(
           visible=False
@@ -152,8 +185,9 @@ def createCountryBubbleGraph(geographyLevel='countries',
     else:
       fig = figScatter
     
-      
-    if geographyLevel == "countries":
+    
+    
+    if geographyLevel == "countries" and not x_log and not y_log:
         # Add flags to each frame
         for frame in fig.frames: #frame = fig.frames[19]
           #print(frame.layout.images)
@@ -228,13 +262,16 @@ def createCountryBubbleGraph(geographyLevel='countries',
     fig.update_layout(
         xaxis_title=x_var,
         yaxis_title=y_var,
-        title=""
+        title="",
+        autosize=True,
+        width=1100,
+        height=700,
     )
     
     if fixed_axes:
       fig.update_layout(
-        xaxis=dict(range=[0, max_x]),
-        yaxis=dict(range=[0, max_y])
+        xaxis=dict(range=[min_x, max_x]),
+        yaxis=dict(range=[min_y, max_y])
         )
     
     # Update layout to not autoplay
@@ -273,6 +310,43 @@ def createCountryBubbleGraph(geographyLevel='countries',
         }]
     )
 
+
+    if False:
+        race_var = 'co2'
+        # Function to keep only the top x geographies by CO2 emissions for each year
+        n_bars = 6
+        plot_dfRace = plot_df.groupby('year').apply(lambda x: x.nlargest(n_bars, race_var)).reset_index(drop=True)
+        
+        # Sort the data by year and CO2 emissions in descending order
+        plot_dfRace = plot_dfRace.sort_values(by=['year', race_var], ascending=[True, True])
+    
+        # Create a horizontal bar chart race
+        figRace = px.bar(
+            plot_dfRace,
+            x=race_var,
+            y='geography',
+            text='geography',
+            orientation='h',
+            animation_frame='year',
+            #range_x=[0, plot_dfRace[x_var].max() * 1.1],  # Set x-axis range with some padding
+            title="CO2 Emissions Over Time by Geography",
+        )
+        
+        # Update layout to move text to the right of the bars
+        figRace.update_traces(
+            textposition='outside',  # Move text outside to the right of the bars
+            #insidetextanchor='start'  # Align the text to the start of the bar (left side)
+        )
+        
+        # Adjust layout for better appearance
+        figRace.update_layout(
+            template='plotly_white',
+            xaxis_title=x_var,
+            yaxis_title="Geography",
+            showlegend=False,  # Hide legend since text labels are used
+        )
+    
+    
     print("plot created")
     return(fig)
     

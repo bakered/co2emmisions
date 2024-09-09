@@ -97,6 +97,8 @@ app_ui = ui.page_fluid(
                 ui.input_numeric(id="bubble_size", label="Size bubble: (x times bigger)", min=0.01, max=100, value=1),
                 ui.input_checkbox(id="fixed_axes", label="Fixed Axes", value=True),
                 ui.input_checkbox(id="leave_trace", label="Leave Trace", value=True),
+                ui.input_checkbox(id="x_log", label="x axis log", value=False),
+                ui.input_checkbox(id="y_log", label="y axis log", value=False),
                 ),
             ui.tags.style("""
                           .sidebar {
@@ -138,7 +140,9 @@ def server(input, output, session):
             geography_list=input.geography_list(),
             bubble_size=input.bubble_size(),
             fixed_axes=input.fixed_axes(),
-            leave_trace=input.leave_trace()
+            leave_trace=input.leave_trace(),
+            x_log=input.x_log(),
+            y_log=input.y_log(),
         )
         return ui.HTML(plot.to_html(full_html=False))
     
