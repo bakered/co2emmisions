@@ -33,14 +33,44 @@ def createCountryBubbleGraph(geographyLevel='countries',
     
     #geographyLevel='countries'; x_var='gdp_per_capita'; y_var='co2_per_capita'; size_var='co2'; race_var='accumulated_co2'; leave_trace=True; fixed_axes=True; flag_size=1; x_log=False; y_log=False; show_flags=False; start_year=1950
     
-    color_map = {'LDCs': '#FFC800', 'Developed': '#009EDB', 'Developing': '#ED1847'}
-    labels = {"co2_per_capita": "CO2 per capita",
-             "gdp_per_capita": "GDP per capita",
-             "co2": "Yearly CO2 (tons)",
-             "accumulated_co2": "Accumulated CO2", 
+    if False: #geographyLevel=='countries':
+        color_map = {'Developed': '#009EDB', 'Developing': '#ED1847', 'LDCs': '#FFC800'}
+        colour_var = 'region2'
+    else:
+        color_map = {'Developed': '#009EDB', 'Developing Asia': '#ED1847', 'Developing LAC': '#72BF44', 'Africa': '#FFC800', }
+        colour_var = 'region1'
+    
+    labels = {"co2_per_capita": "CO2 per capita (Tons)",
+             "gdp_per_capita": "GDP per capita (2011 Dollars, PPP)",
+             "co2": "Yearly CO2 (Kilotons)",
+             "accumulated_co2": "Accumulated CO2 (Kilotons)", 
              "pop": "Population", 
-             "gdp": "GDP (millions)", 
+             "gdp": "GDP (Millions)", 
               }
+    
+    if geographyLevel == "countries":
+        text_positions = {
+            'USA': 'top left',
+            "ZAF": 'top left', 
+            "EGY": 'top left', 
+            "DZA": 'top left', 
+            "USA": 'top left', 
+            "RUS": 'top left', 
+            "JPN": 'top left', 
+            "CHN": 'top left', 
+            "IND": 'top left', 
+            "IRN": 'top left', 
+            "BRA": 'top left', 
+            "MEX": 'top left', 
+            "ARG": 'top left',
+        }
+    else:
+        text_positions = {
+            'Africa': 'top right',
+            'Developing Asia': 'top left',
+            'Developing LAC': 'bottom right',
+            'Developed': 'bottom center'
+        }
     
     now_time = time.time()
     print(f"start function time: {now_time - start_time} seconds")
@@ -54,25 +84,54 @@ def createCountryBubbleGraph(geographyLevel='countries',
     else:
         infile = Path(__file__).parent / "dataRegions.csv"
     data = pd.read_csv(infile)
+    data['region1'] = pd.Categorical(data['region1'], categories=['Developed', 'Developing Asia', 'Developing LAC', 'Africa'], ordered=True)
+    data['year'] = data['year'].astype(int)
     
     now_time = time.time()
     print(f"loaded data time: {now_time - start_time} seconds")
     progress.set(3, "creating bubbles...")
     
     if geographyLevel == 'countries': 
-        data['year'] = data['year'].astype(int)
         # create image link from ISO2
         data['ISO2']= data['ISO2'].astype(str)
         data['image_link'] = data['ISO2'].apply(lambda iso: f"https://hatscripts.github.io/circle-flags/flags/{iso.lower()}.svg")
-        data['geography'] = data['ISO3']
+        geography = 'ISO3'
     else:
-        data['geography'] = data['region2']
+        geography = 'region1'
+
+
 
     
     # Filter the DataFrame based on the list of ISO3 codes
-    plot_df = data[(data['geography'].isin(geography_list)) & (data['year'] > start_year)].copy()
+    plot_df = data[(data[geography].isin(geography_list)) & (data['year'] > start_year)].copy()
+    
+    ##### reorder to prevent frantic swapping
+    ## make changes to either scatter plot            
+    desired_order = ["Developed", "Developing Asia", "Developing LAC", "Africa"]
+    desired_order = [category for category in desired_order if category in plot_df[colour_var].unique()]
+     
+    # create ordering so NaNs come last
+    mask = ~plot_df[[x_var, y_var, size_var]].isna().any(axis=1)
+    iso3_counts = plot_df[mask][geography].value_counts().reset_index()
+    iso3_counts.columns = [geography, 'count']  # Rename the columns
+    plot_df = plot_df.merge(iso3_counts, on=geography)
+    
+    
+    if geographyLevel == "countries":
+        # create ordering such that the ISO3s for whom text should be written come first
+        position_rank = {key: rank + 1 for rank, key in enumerate(text_positions.keys())}
+        plot_df['custom_order'] = plot_df[geography].map(position_rank).fillna(len(position_rank) + 1).astype(int)
+        plot_df = plot_df.sort_values(by=['region1', 'custom_order', 'count', geography, 'year'], ascending=[True, True, False, True, True])
+        plot_df = plot_df.drop(columns=['count', 'custom_order'])
+    else: 
+        plot_df = plot_df.sort_values(by=['region1', 'count', 'year'], ascending=[True, False, True])
+        plot_df = plot_df.drop(columns=['count'])
 
     #geography_list=['ARG', 'AUS', 'BRA', 'CAN', 'CHN', 'FRA', 'DEU', 'IND', 'IDN', 'ITA', 'JPN', 'MEX', 'RUS', 'SAU', 'ZAF', 'KOR', 'TUR', 'GBR', 'USA', 'SGP', 'PNG', 'MYS', 'BRN', 'IRN', 'OMN']
+    
+    
+    
+    
     
     def weighted_percentile(values, weights, percentile): #values = plot_df[y_var][index_max_y]; weights=plot_df['pop'][index_max_y]; percentile=95
         """Compute the weighted percentile of a given list of values."""
@@ -92,8 +151,8 @@ def createCountryBubbleGraph(geographyLevel='countries',
         return sorted_values[index]
     
     # Calculate weighted 95% percentile
-    index_max_x = plot_df.groupby('geography')[x_var].idxmax().dropna()
-    index_max_y = plot_df.groupby('geography')[y_var].idxmax().dropna()
+    index_max_x = plot_df.groupby(geography)[x_var].idxmax().dropna()
+    index_max_y = plot_df.groupby(geography)[y_var].idxmax().dropna()
     max_x = weighted_percentile(plot_df[x_var][index_max_x], plot_df['pop'][index_max_x], 95) *1.2 # plot_df[x_var].max() * 1.2
     max_y = weighted_percentile(plot_df[y_var][index_max_y], plot_df['pop'][index_max_y], 95) *1.2 # plot_df[y_var].max() * 1.2
     min_x = plot_df[x_var].min() * 0.9
@@ -115,11 +174,11 @@ def createCountryBubbleGraph(geographyLevel='countries',
         min_y = 0
         
     #deal with size of bubbles 
-    plot_df['bubble_size'] = plot_df[size_var] + bubble_size
-    plot_df['bubble_size'] = plot_df['bubble_size'].fillna(0)
-    scatter_size_max_parameter = 25
+    plot_df['bubble_size'] = np.where(plot_df[size_var] > 0, plot_df[size_var] + bubble_size, plot_df[size_var])
 
-    print(plot_df['bubble_size'])
+    plot_df['bubble_size'] = plot_df['bubble_size'].fillna(0)
+    scatter_size_max_parameter = 35
+
     
     if max_x>max_y:
         max_bubble_size_wanted = (max_x/10)*flag_size
@@ -136,7 +195,7 @@ def createCountryBubbleGraph(geographyLevel='countries',
     plot_df.loc[:, 'normalized_size'] *= (max_bubble_size_wanted / co2_max)
     
     #this is used later in flag addition
-    geographies = plot_df['geography'].unique()
+    geographies = plot_df[geography].unique()
     
     if geographyLevel == "countries":
         # Create the base plot with Plotly Express
@@ -144,66 +203,116 @@ def createCountryBubbleGraph(geographyLevel='countries',
             plot_df, 
             x=x_var, 
             y=y_var, 
-            color='region2',
+            color=colour_var,
             color_discrete_map=color_map,
             size='bubble_size', 
-            hover_name='geography',
+            text=geography,
+            hover_name=geography,
             animation_frame='year', 
             size_max=scatter_size_max_parameter,
             template="plotly_white"
         )
-        figScatter.update_layout(
-            legend_title_font=dict(size=15, family="Times New Roman"),
-            legend=dict(
-                title='Region',
-                x=0.15,            # x-coordinate of the legend (0 = left, 1 = right)
-                y=0.85,            # y-coordinate of the legend (0 = bottom, 1 = top)
-                xanchor='left', # Positioning relative to the x-coordinate (left)
-                yanchor='top',  # Positioning relative to the y-coordinate (top)
-            )
-        )
-
+        
         if not x_log and not y_log:
             figScatter.update_traces(marker=dict(opacity=0.8))  # Set opacity to 0 for invisibility
         else:
             figScatter.update_traces(marker=dict(opacity=0.8))
+            
+        num_points = len(plot_df[geography].unique())
         
+        
+        for frame in figScatter.frames:
+           # if frame.name == "Developed":
+                #print(frame)
+            if num_points <= 15:
+                for trace in frame.data:
+                    tracetextpositions = []
+                    for ISO3 in trace.text:
+                        if ISO3 in text_positions:
+                            tracetextpositions.append(text_positions[ISO3])
+                        else:
+                            tracetextpositions.append('top left')
+                    trace.textposition = tracetextpositions
+            else:
+                for trace in frame.data:
+                    tracetext = []
+                    tracetextpositions = []
+                    for ISO3 in trace.text:
+                        if ISO3 in text_positions:
+                            tracetext.append(ISO3)
+                            tracetextpositions.append(text_positions[ISO3])
+                        else:
+                            tracetext.append('')
+                            tracetextpositions.append('top left')
+                    trace.text = tracetext
+                    trace.textposition = tracetextpositions
+            #if frame.name == "Developed":
+                #print(frame)
+
     else:
         # Create the base plot with Plotly Express
         figScatter = px.scatter(
             plot_df, 
             x=x_var, 
             y=y_var, 
-            color='geography',
+            color=colour_var,
             color_discrete_map=color_map,
             size='bubble_size', 
-            text='geography',
-            hover_name='geography',
+            text=geography,
+            hover_name=geography,
             animation_frame='year', 
             size_max=scatter_size_max_parameter,
             template="plotly_white"
         )
-        figScatter.update_layout(
-            legend_title_font=dict(size=15, family="Times New Roman"),
-            legend=dict(
-                x=0.15,            # x-coordinate of the legend (0 = left, 1 = right)
-                y=0.85,            # y-coordinate of the legend (0 = bottom, 1 = top)
-                xanchor='left', # Positioning relative to the x-coordinate (left)
-                yanchor='top',  # Positioning relative to the y-coordinate (top)
-            )
-        )
+        
         figScatter.update_traces(textposition='top right')
         figScatter.update_traces(marker=dict(opacity=0.8))
-        text_positions = {
-            'LDCs': 'top right',
-            'Developing': 'top center',
-            'Developed': 'bottom center'
-        }
+        
         # Update traces with positions and labels
         for trace in figScatter.data:
             if trace.name in text_positions:
                 trace.textposition = text_positions[trace.name]
                 
+        # Do the same for each frame in the figure
+        for frame in figScatter.frames:
+            # Update traces in the current frame
+            for trace in frame.data:
+                tracetextpositions = []
+                tracetext = []
+                for region in trace.text:
+                    if region in text_positions:
+                        tracetextpositions.append(text_positions[region])
+                        tracetext.append(region)
+                    else:
+                        tracetextpositions.append('top left')
+                        tracetext.append('')  # or leave it empty based on your requirement
+                trace.textposition = tracetextpositions
+                trace.text = tracetext
+        
+        
+     #   print(figScatter.data)
+      
+    
+    
+    # Extract traces and reorder them
+    ordered_traces = []
+    for category in desired_order:
+        # Filter traces for each category
+        trace = next(tr for tr in figScatter.data if tr.name == category)
+        ordered_traces.append(trace)        
+    # Update the figure with reordered traces
+    figScatter.data = ordered_traces
+    figScatter.update_layout(
+        legend_title_font=dict(size=15, family="Helvetica Neue LT Std 45 Light"),
+        legend=dict(
+            title="Region",
+            x=0.15,            # x-coordinate of the legend (0 = left, 1 = right)
+            y=0.85,            # y-coordinate of the legend (0 = bottom, 1 = top)
+            xanchor='left', # Positioning relative to the x-coordinate (left)
+            yanchor='top',  # Positioning relative to the y-coordinate (top)
+            traceorder='normal',
+        )
+    )
         
     now_time = time.time()
     print(f"Created scatter time: {now_time - start_time} seconds")
@@ -219,15 +328,17 @@ def createCountryBubbleGraph(geographyLevel='countries',
     if y_log:
         figScatter.update_yaxes(type='log')
         
-    # following code does not work with shiny? but with html
-    figScatter.update_traces(
-        customdata=plot_df[['geography', 'gdp']].values,
-        hovertemplate="<br>".join([
-            "<strong>%{customdata[0]}</strong><br>",
-            "GDP (millions): %{customdata[1]:,.0f}",
-            "<extra></extra>"  # Removes the trace name from hover
-    ])
-    )
+    # following code does not work: it changes the hovertext on the first frame only, and in that case wrong... need to deal with frames!.
+    #.. better to go trace by trace?
+    
+  #  figScatter.update_traces(
+  #      customdata=plot_df[[geography, 'gdp']].values,
+  #      hovertemplate="<br>".join([
+  #          "<strong>%{customdata[0]}</strong><br>",
+  #          "GDP (millions): %{customdata[1]:,.0f}",
+  #          "<extra></extra>"  # Removes the trace name from hover
+  #  ])
+  #  )
     
     
     if leave_trace:
@@ -252,11 +363,11 @@ def createCountryBubbleGraph(geographyLevel='countries',
             expanded_rows, 
             x=x_var, 
             y=y_var, 
-            color='region2',
-            line_group='geography',
+            color=colour_var,
+            line_group=geography,
             color_discrete_map=color_map,
-            #line_group='geography',  # Group by geography to draw a separate line for each
-            #hover_name='geography', 
+            #line_group=geography,  # Group by geography to draw a separate line for each
+            #hover_name=geography, 
             animation_frame='year',
             template="plotly_white"
             )
@@ -311,7 +422,7 @@ def createCountryBubbleGraph(geographyLevel='countries',
     
     
     # Add flags to each frame
-    full_index = pd.Index(geographies, name='geography')
+    full_index = pd.Index(geographies, name=geography)
     if geographyLevel == "countries" and not x_log and not y_log and show_flags:
         progress.set(90, "adding flags...")
         for frame in fig.frames: #frame = fig.frames[19]
@@ -323,14 +434,14 @@ def createCountryBubbleGraph(geographyLevel='countries',
             #  year_data = plot_df[plot_df['year'] <= int(year)]
             #  ## add in NA rows for missing data
             #  full_years = list(range(1970, int(year)+1))
-            #  full_index = pd.MultiIndex.from_product([countries, full_years], names=['geography', 'year'])
-            #  year_data = year_data.set_index(['geography', 'year']).reindex(full_index).reset_index()
+            #  full_index = pd.MultiIndex.from_product([countries, full_years], names=[geography, 'year'])
+            #  year_data = year_data.set_index([geography, 'year']).reindex(full_index).reset_index()
             #else:
             year_data = plot_df[plot_df['year'] == int(year)]
             ## add in NA rows for missing data
      
             
-            year_data = year_data.set_index('geography').reindex(full_index).reset_index()
+            year_data = year_data.set_index(geography).reindex(full_index).reset_index()
       
             # Create list of image annotations for this year
             image_annotations = []
@@ -433,13 +544,17 @@ def createCountryBubbleGraph(geographyLevel='countries',
     )
     
     if fixed_axes:
-      fig.update_layout(
-        xaxis=dict(range=[min_x, max_x]),
-        yaxis=dict(range=[min_y, max_y])
-        )
+        fig.update_yaxes(fixedrange = True)
+        fig.update_xaxes(fixedrange = True)
+        fig.update_layout(
+          xaxis=dict(range=[min_x, max_x]),
+          yaxis=dict(range=[min_y, max_y])
+          )
 
 
     
+    print(figScatter.layout)
+    print(fig.layout)
         
     
     if True:
@@ -448,12 +563,12 @@ def createCountryBubbleGraph(geographyLevel='countries',
             updatemenus=[{
                 'buttons': [
                     {
-                        'args': [None, {'frame': {'duration': 250, 'redraw': False}, 'fromcurrent': True, 'mode': 'immediate', 'transition': {'duration': 250}}],
+                        'args': [None, {'frame': {'duration': 400, 'redraw': True}, 'fromcurrent': True, 'mode': 'immediate', 'transition': {'duration': 400}}],
                         'label': 'Play',
                         'method': 'animate'
                     },
                     {
-                        'args': [[None], {'frame': {'duration': 250, 'redraw': False}, 'mode': 'immediate', 'transition': {'duration': 250}}],
+                        'args': [[None], {'frame': {'duration': 400, 'redraw': True}, 'mode': 'immediate', 'transition': {'duration': 400}}],
                         'label': 'Pause',
                         'method': 'animate'
                     }
@@ -471,10 +586,10 @@ def createCountryBubbleGraph(geographyLevel='countries',
   
     
     fig.update_layout(
-        title_font=dict(family="Times New Roman", size=24, color="black"),
-        xaxis_title_font=dict(family="Times New Roman", size=18, color="black"),
-        yaxis_title_font=dict(family="Times New Roman", size=18, color="black"),
-        font=dict(family="Times New Roman", size=14, color="black")
+        title_font=dict(family="Helvetica Neue LT Std 45 Light", size=24, color="black"),
+        xaxis_title_font=dict(family="Helvetica Neue LT Std 45 Light", size=18, color="black"),
+        yaxis_title_font=dict(family="Helvetica Neue LT Std 45 Light", size=18, color="black"),
+        font=dict(family="Helvetica Neue LT Std 45 Light", size=14, color="black")
     )
     
     now_time = time.time()

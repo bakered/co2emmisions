@@ -63,17 +63,35 @@ g20_countries = ["ARG", "AUS", "BRA", "CAN", "CHN", "FRA", "DEU", "IND", "IDN",
 
 img_urls = [f'https://cdn.rawgit.com/lipis/flag-icon-css/master/flags/4x3/{country}.svg' for country in countries]
 
-regions = ["LDCs", "Developed", "Developing"] # ["Africa", "Developing America", "Developing Asia", "developed (excluding eastern block)"]
+#regions = ["LDCs", "Developed", "Developing"] 
+regions =  ["Developed", "Developing Asia", "Developing LAC", "Africa"]
 
-labels = {"co2_per_capita": "CO2 per capita",
-         "gdp_per_capita": "GDP per capita",
-         "co2": "Yearly CO2 (tons)",
-         "accumulated_co2": "Accumulated CO2", 
+
+labels = {"co2_per_capita": "CO2 per capita (Tons)",
+         "gdp_per_capita": "GDP per capita (2011 Dollars, PPP)",
+         "co2": "Yearly CO2 (Kilotons)",
+         "accumulated_co2": "Accumulated CO2 (Kilotons)", 
          "pop": "Population", 
-         "gdp": "GDP (millions)", 
+         "gdp": "GDP (Millions)", 
           }
 
+gochi_font_css = """
+<style type="text/css">
+    @font-face {
+        font-family: 'Helvetica Neue LT Std 45 Light';
+        src: url('https://github.com/esambino/H_and_L/blob/master/font/helvetica-neue-lt-std-45-light.otf') format("opentype"); 
+    }
+    body {
+        font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif; 
+    }
+</style>
+"""
+
+
+
+
 app_ui = ui.page_fluid(
+    ui.HTML(gochi_font_css),
     ui.tags.style("""
                   
         .js-plotly-plot,
@@ -101,8 +119,7 @@ app_ui = ui.page_fluid(
         aside textarea,
         aside label,
         aside select {
-            font-family: "Helvetica Neue LT Std 45 Light";
-            
+            font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;  
         }
         
     """),
@@ -127,7 +144,7 @@ app_ui = ui.page_fluid(
                                 choices=labels,
                                 selected="co2"),
                 
-                ui.input_numeric(id="start_year", label="Start Year:", min=1820, max=2021, value=1950),
+                ui.input_numeric(id="start_year", label="Start Year:", min=1820, max=2021, value=1951),
                 ui.input_action_button(id="select_all_countries", label="Select all countries"),
                 ui.input_action_button(id="select_g20", label="Select G20"),
                 ui.input_selectize(id="geography_list", label="Show country:", 
@@ -135,7 +152,7 @@ app_ui = ui.page_fluid(
                                    multiple=True, 
                                    selected=countries2),
                 
-                ui.input_numeric(id="bubble_size", label="Bubble parameter (increase to make bubbles more similar): ", min=0, value=1000000),
+                ui.input_numeric(id="bubble_size", label="Bubble parameter (increase to make bubbles more similar): ", min=0, value=500000),
                 ui.input_numeric(id="flag_size", label="Flag size: (x times bigger)", min=0.01, max=100, value=1),
                 ui.input_checkbox(id="fixed_axes", label="Fixed Axes", value=True),
                 ui.input_checkbox(id="leave_trace", label="Leave Trace", value=False),
@@ -160,7 +177,7 @@ def server(input, output, session):
     @reactive.Calc
     def update_geography_list():
         if input.geographyLevel() == "countries":
-            return [countries2, g20_countries, "Show country:"]
+            return [countries2, countries2, "Show country:"]
         else:
             return [regions, regions, "Show region:"]
         
@@ -170,16 +187,18 @@ def server(input, output, session):
         choices, selected, label = update_geography_list()
         ui.update_selectize("geography_list", choices=choices, selected=selected, label=label)
         if input.geographyLevel() == "countries":
-            ui.update_numeric("bubble_size", value =1000000)
+            ui.update_numeric("bubble_size", value =500000)
+            ui.update_checkbox('leave_trace', value=False)
         else:
             ui.update_numeric("bubble_size", value =0)
+            ui.update_checkbox('leave_trace', value=True)
        
     @reactive.Effect
     @reactive.event(input.select_all_countries)
     def select_all_countries():
         if input.geographyLevel() == "countries":
             ui.update_selectize("geography_list", selected=countries2)
-            ui.update_numeric("bubble_size", value =1000000)
+            ui.update_numeric("bubble_size", value =500000)
 
     # Handle "Select G20" button click
     @reactive.Effect
@@ -187,7 +206,7 @@ def server(input, output, session):
     def select_g20_countries():
         if input.geographyLevel() == "countries":
             ui.update_selectize("geography_list", selected=g20_countries)
-            ui.update_numeric("bubble_size", value =1000000)
+            ui.update_numeric("bubble_size", value =500000)
         
     #@output
     #@render.plot
@@ -218,7 +237,17 @@ def server(input, output, session):
                 start_time=start_time,
                 progress=progress,
             )
-        return ui.HTML(plot.to_html(full_html=True, auto_play=False, default_width='90vw', default_height='90vh', div_id='id_plot-container'))
+            # Generate the HTML string
+            html_content = plot.to_html(full_html=True, auto_play=True, default_width='90vw', default_height='90vh', div_id='id_plot-container')
+            
+            #print(type(html_content))
+            # Replace "Times New Roman" with "Helvetica Neue LT Std 45 Light"
+            #html_content = html_content.replace('Times New Roman', 'Helvetica')
+            # Save the modified HTML to a file
+            #with open('/Users/edbaker/UN_projects/c02emmisions/html_content.html', 'w') as f:
+            #    f.write(html_content)
+
+        return ui.HTML(html_content)
         #output.out_plot.set_render(ui.HTML(plot.to_html(full_html=True)))
         
      
