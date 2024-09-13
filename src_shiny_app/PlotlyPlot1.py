@@ -8,12 +8,33 @@ from pathlib import Path
 #from plotly.subplots import make_subplots
 #import copy
 import time
+import math
 
-def createCountryBubbleGraph(geographyLevel='countries', 
+
+def weighted_percentile(values, weights, percentile): #values = plot_df[y_var][index_max_y]; weights=plot_df['pop'][index_max_y]; percentile=95
+    """Compute the weighted percentile of a given list of values."""
+    # Convert values and weights to numpy arrays
+    values = np.array(values)
+    weights = np.array(weights)
+    # Remove NaNs from both values and weights
+    mask = ~np.isnan(values) & ~np.isnan(weights)
+    values = values[mask]
+    weights = weights[mask]
+    sorted_indices = np.argsort(values)
+    sorted_values = np.array(values)[sorted_indices]
+    sorted_weights = np.array(weights)[sorted_indices]
+    cumulative_weights = np.cumsum(sorted_weights)
+    percentile_value = np.percentile(cumulative_weights, percentile)
+    index = np.searchsorted(cumulative_weights, percentile_value)
+    return sorted_values[index]
+
+def createCountryBubbleGraph(datasource="GCP and Maddison",
+                             geographyLevel='countries', 
                              x_var = 'gdp_per_capita', 
                              y_var = 'co2_per_capita', 
                              size_var = 'co2',
                              race_var = 'accumulated_co2',
+                             smoothness = 2,
                              leave_trace = True, 
                              fixed_axes = True,
                              bubble_size=0,
@@ -33,20 +54,37 @@ def createCountryBubbleGraph(geographyLevel='countries',
     
     #geographyLevel='countries'; x_var='gdp_per_capita'; y_var='co2_per_capita'; size_var='co2'; race_var='accumulated_co2'; leave_trace=True; fixed_axes=True; flag_size=1; x_log=False; y_log=False; show_flags=False; start_year=1950
     
+    
+    ########## SET PARAMETERS
+    region1s = ["Developed", 
+                "Developing Asia and Oceania", 
+                "Latin America and the Carribean", 
+                "Africa"]
+    
     if False: #geographyLevel=='countries':
         color_map = {'Developed': '#009EDB', 'Developing': '#ED1847', 'LDCs': '#FFC800'}
         colour_var = 'region2'
     else:
-        color_map = {'Developed': '#009EDB', 'Developing Asia': '#ED1847', 'Developing LAC': '#72BF44', 'Africa': '#FFC800', }
+        color_map = {'Developed': '#009EDB', 'Developing Asia and Oceania': '#ED1847', 'Latin America and the Carribean': '#72BF44', 'Africa': '#FFC800', }
         colour_var = 'region1'
     
-    labels = {"co2_per_capita": "CO2 per capita (Tons)",
-             "gdp_per_capita": "GDP per capita (2011 Dollars, PPP)",
-             "co2": "Yearly CO2 (Kilotons)",
-             "accumulated_co2": "Accumulated CO2 (Kilotons)", 
-             "pop": "Population", 
-             "gdp": "GDP (Millions)", 
-              }
+    if datasource == "GCP and Maddison":
+        labels = {"co2_per_capita": "CO2 per capita (Tons)",
+                 "gdp_per_capita": "GDP per capita (2011 Dollars, PPP)",
+                 "co2": "Yearly CO2 (Kilotons)",
+                 "accumulated_co2": "Accumulated CO2 (Kilotons) (could be inconsistent!)", 
+                 "pop": "Population", 
+                 "gdp": "GDP (Millions)",
+                 }
+    else:
+         labels = {"co2_per_capita": "CO2 per capita (Tons)",
+                  "gdp_per_capita": "GDP per capita (2021 Dollars, PPP)",
+                  "co2": "Yearly CO2 (Kilotons)",
+                  "accumulated_co2": "Accumulated CO2 (Kilotons) (could be inconsistent!)", 
+                  "pop": "Population", 
+                  "gdp": "GDP (Millions)",
+                  }
+                  
     
     if geographyLevel == "countries":
         text_positions = {
@@ -66,12 +104,21 @@ def createCountryBubbleGraph(geographyLevel='countries',
         }
     else:
         text_positions = {
-            'Africa': 'top right',
-            'Developing Asia': 'top left',
-            'Developing LAC': 'bottom right',
+            'Africa': 'middle right',
+            'Developing Asia and Oceania': 'top left',
+            'Latin America and the Carribean': 'bottom right',
             'Developed': 'bottom center'
         }
+        
+    if datasource == "GCP and Maddison":
+        if start_year<1820:
+            start_year = 1820
+    else:
+        if start_year<1990:
+            start_year = 1990
     
+    
+    ########## LOAD DATA
     now_time = time.time()
     print(f"start function time: {now_time - start_time} seconds")
     progress.set(2, "Loading data...")
@@ -79,12 +126,18 @@ def createCountryBubbleGraph(geographyLevel='countries',
     # Import the data
     #data = pd.read_csv("dataCountries.csv")
     #data = pd.read_csv(open_url('https://github.com/bakered/co2emmisions/blob/main/src_shiny_app/dataPlot1.csv'))
-    if geographyLevel == "countries":
-        infile = Path(__file__).parent / "dataCountries.csv"
+    if datasource == "GCP and Maddison":
+        if geographyLevel == "countries":
+            infile = Path(__file__).parent / "dataCountries.csv"
+        else:
+            infile = Path(__file__).parent / "dataRegions.csv"
     else:
-        infile = Path(__file__).parent / "dataRegions.csv"
+        if geographyLevel == "countries":
+            infile = Path(__file__).parent / "dataWDICountries.csv"
+        else:
+            infile = Path(__file__).parent / "dataWDIRegions.csv"
     data = pd.read_csv(infile)
-    data['region1'] = pd.Categorical(data['region1'], categories=['Developed', 'Developing Asia', 'Developing LAC', 'Africa'], ordered=True)
+    data['region1'] = pd.Categorical(data['region1'], categories=region1s, ordered=True)
     data['year'] = data['year'].astype(int)
     
     now_time = time.time()
@@ -101,13 +154,13 @@ def createCountryBubbleGraph(geographyLevel='countries',
 
 
 
-    
+    ########## FILTER AND ORDER DATA
     # Filter the DataFrame based on the list of ISO3 codes
     plot_df = data[(data[geography].isin(geography_list)) & (data['year'] > start_year)].copy()
     
     ##### reorder to prevent frantic swapping
     ## make changes to either scatter plot            
-    desired_order = ["Developed", "Developing Asia", "Developing LAC", "Africa"]
+    desired_order = region1s 
     desired_order = [category for category in desired_order if category in plot_df[colour_var].unique()]
      
     # create ordering so NaNs come last
@@ -115,8 +168,6 @@ def createCountryBubbleGraph(geographyLevel='countries',
     iso3_counts = plot_df[mask][geography].value_counts().reset_index()
     iso3_counts.columns = [geography, 'count']  # Rename the columns
     plot_df = plot_df.merge(iso3_counts, on=geography)
-    
-    
     if geographyLevel == "countries":
         # create ordering such that the ISO3s for whom text should be written come first
         position_rank = {key: rank + 1 for rank, key in enumerate(text_positions.keys())}
@@ -132,24 +183,7 @@ def createCountryBubbleGraph(geographyLevel='countries',
     
     
     
-    
-    def weighted_percentile(values, weights, percentile): #values = plot_df[y_var][index_max_y]; weights=plot_df['pop'][index_max_y]; percentile=95
-        """Compute the weighted percentile of a given list of values."""
-        # Convert values and weights to numpy arrays
-        values = np.array(values)
-        weights = np.array(weights)
-        # Remove NaNs from both values and weights
-        mask = ~np.isnan(values) & ~np.isnan(weights)
-        values = values[mask]
-        weights = weights[mask]
-        sorted_indices = np.argsort(values)
-        sorted_values = np.array(values)[sorted_indices]
-        sorted_weights = np.array(weights)[sorted_indices]
-        cumulative_weights = np.cumsum(sorted_weights)
-        percentile_value = np.percentile(cumulative_weights, percentile)
-        index = np.searchsorted(cumulative_weights, percentile_value)
-        return sorted_values[index]
-    
+   ########## CALCULATE VALUES 
     # Calculate weighted 95% percentile
     index_max_x = plot_df.groupby(geography)[x_var].idxmax().dropna()
     index_max_y = plot_df.groupby(geography)[y_var].idxmax().dropna()
@@ -188,7 +222,7 @@ def createCountryBubbleGraph(geographyLevel='countries',
     
     # Add normalized_size column such that the value is the diameter making 
     plot_df[size_var] = plot_df[size_var].fillna(0)
-    plot_df.loc[:, 'normalized_size'] = 2 * np.sqrt(plot_df[size_var] /3.141592653589793) 
+    plot_df.loc[:, 'normalized_size'] = 2 * np.sqrt(plot_df[size_var] /np.pi) 
     co2_max = plot_df['normalized_size'].max()
     # scale column such that the co2_max will be the size of the bubble you want measured in x-axis units. 
     # (warning: i think only works if x-axis is larger than y-axis)
@@ -197,6 +231,68 @@ def createCountryBubbleGraph(geographyLevel='countries',
     #this is used later in flag addition
     geographies = plot_df[geography].unique()
     
+    ########## ADD SMOOTHING
+    progress.set(5, "Adding smoothness...")
+    def expand_dataframe(df, n, geography, year, x_var, y_var, bubble_size, additional_cols):
+        # Create an empty list to store the results
+        expanded_rows = []
+    
+        # Iterate over unique geography values
+        for geo in df[geography].unique():
+            # Filter the dataframe for the current geography
+            geo_df = df[df[geography] == geo].sort_values(by=year).reset_index(drop=True)
+    
+            # Iterate through consecutive rows
+            for i in range(len(geo_df) - 1):
+                # Get the starting and ending rows
+                row_start = geo_df.iloc[i]
+                row_end = geo_df.iloc[i + 1]
+    
+                # Create interpolated rows
+                for j in range(n):
+                    # Interpolation factor (j=0 gives the start row, j=n-1 gives the end row)
+                    alpha = j / n
+    
+                    # Interpolate the numeric values using dynamic column names
+                    interpolated_row = {
+                        geography: row_start[geography],  # geography stays the same
+                        year: row_start[year] * (1 - alpha) + row_end[year] * alpha,
+                        x_var: row_start[x_var] * (1 - alpha) + row_end[x_var] * alpha,
+                        y_var: row_start[y_var] * (1 - alpha) + row_end[y_var] * alpha,
+                        bubble_size: row_start[bubble_size] * (1 - alpha) + row_end[bubble_size] * alpha
+                    }
+                   
+                    # Keep additional columns (like image_link and region1) unchanged
+                    for col in additional_cols:
+                        interpolated_row[col] = row_start[col]
+                        
+                        
+                    # Append the interpolated row to list of rows
+                    expanded_rows.append(interpolated_row)
+
+        
+        expanded_df = pd.DataFrame(expanded_rows)
+        return expanded_df
+
+
+    if geographyLevel == "countries":
+        additional_cols = ['image_link', 'region1']
+    else:
+        additional_cols = ['region1']
+        
+    plot_df = expand_dataframe(plot_df, 
+                               n=smoothness, 
+                               geography=geography, 
+                               year='year', 
+                               x_var=x_var, 
+                               y_var=y_var, 
+                               bubble_size='bubble_size',
+                               additional_cols = additional_cols
+                               )
+    
+    
+    
+    ########## CREATE SCATTER PLOT
     if geographyLevel == "countries":
         # Create the base plot with Plotly Express
         figScatter = px.scatter(
@@ -210,7 +306,8 @@ def createCountryBubbleGraph(geographyLevel='countries',
             hover_name=geography,
             animation_frame='year', 
             size_max=scatter_size_max_parameter,
-            template="plotly_white"
+            template="plotly_white",
+            #trendline="lowess"
         )
         
         if not x_log and not y_log:
@@ -218,36 +315,7 @@ def createCountryBubbleGraph(geographyLevel='countries',
         else:
             figScatter.update_traces(marker=dict(opacity=0.8))
             
-        num_points = len(plot_df[geography].unique())
         
-        
-        for frame in figScatter.frames:
-           # if frame.name == "Developed":
-                #print(frame)
-            if num_points <= 15:
-                for trace in frame.data:
-                    tracetextpositions = []
-                    for ISO3 in trace.text:
-                        if ISO3 in text_positions:
-                            tracetextpositions.append(text_positions[ISO3])
-                        else:
-                            tracetextpositions.append('top left')
-                    trace.textposition = tracetextpositions
-            else:
-                for trace in frame.data:
-                    tracetext = []
-                    tracetextpositions = []
-                    for ISO3 in trace.text:
-                        if ISO3 in text_positions:
-                            tracetext.append(ISO3)
-                            tracetextpositions.append(text_positions[ISO3])
-                        else:
-                            tracetext.append('')
-                            tracetextpositions.append('top left')
-                    trace.text = tracetext
-                    trace.textposition = tracetextpositions
-            #if frame.name == "Developed":
-                #print(frame)
 
     else:
         # Create the base plot with Plotly Express
@@ -268,26 +336,7 @@ def createCountryBubbleGraph(geographyLevel='countries',
         figScatter.update_traces(textposition='top right')
         figScatter.update_traces(marker=dict(opacity=0.8))
         
-        # Update traces with positions and labels
-        for trace in figScatter.data:
-            if trace.name in text_positions:
-                trace.textposition = text_positions[trace.name]
-                
-        # Do the same for each frame in the figure
-        for frame in figScatter.frames:
-            # Update traces in the current frame
-            for trace in frame.data:
-                tracetextpositions = []
-                tracetext = []
-                for region in trace.text:
-                    if region in text_positions:
-                        tracetextpositions.append(text_positions[region])
-                        tracetext.append(region)
-                    else:
-                        tracetextpositions.append('top left')
-                        tracetext.append('')  # or leave it empty based on your requirement
-                trace.textposition = tracetextpositions
-                trace.text = tracetext
+        
         
         
      #   print(figScatter.data)
@@ -303,21 +352,18 @@ def createCountryBubbleGraph(geographyLevel='countries',
     # Update the figure with reordered traces
     figScatter.data = ordered_traces
     figScatter.update_layout(
-        legend_title_font=dict(size=15, family="Helvetica Neue LT Std 45 Light"),
+        legend_title_font=dict(size=16, family="Helvetica Neue LT Std 45 Light"),
         legend=dict(
             title="Region",
-            x=0.15,            # x-coordinate of the legend (0 = left, 1 = right)
+            x=0.10,            # x-coordinate of the legend (0 = left, 1 = right)
             y=0.85,            # y-coordinate of the legend (0 = bottom, 1 = top)
             xanchor='left', # Positioning relative to the x-coordinate (left)
             yanchor='top',  # Positioning relative to the y-coordinate (top)
             traceorder='normal',
+            font = dict(family = "Helvetica Neue LT Std 45 Light", size = 15, color = "black"),
         )
     )
-        
-    now_time = time.time()
-    print(f"Created scatter time: {now_time - start_time} seconds")
-    progress.set(10, "calculating lines data...")
-    
+
     # Extract color mapping from figLine
     #color_map = {trace.name: trace.marker.color for trace in figScatter.data if 'color' in trace.marker}
     
@@ -341,13 +387,18 @@ def createCountryBubbleGraph(geographyLevel='countries',
   #  )
     
     
+    ########## CREATE LINE PLOT    
+    now_time = time.time()
+    print(f"Created scatter time: {now_time - start_time} seconds")
+    progress.set(10, "calculating lines data...")
+    
     if leave_trace:
         # xxxxx add a line of best fit : smooth curve..or pre-calculate and save in data?
         #  Loop over each year in the DataFrame
         expanded_rows = pd.DataFrame()
         for year in plot_df['year'].unique(): # year=plot_df['year'].unique()[12]
             # Filter the rows for the current year and all previous years
-            filtered_rows = plot_df[plot_df['year'].astype(int) <= int(year)].copy()
+            filtered_rows = plot_df[plot_df['year'].astype(float) <= float(year)].copy()
             filtered_rows.loc[:, 'year'] = year
             # Append these rows to the list
             expanded_rows = pd.concat([expanded_rows, filtered_rows], axis=0, ignore_index=True)
@@ -372,27 +423,25 @@ def createCountryBubbleGraph(geographyLevel='countries',
             template="plotly_white"
             )
         figLine.update_traces(hoverinfo='skip', hovertemplate=None)
-        figLine.update_layout(showlegend=False)
-        figLine.update_traces(opacity=0.8)
-        
-        now_time = time.time()
-        print(f"created line graph time: {now_time - start_time} seconds")
-        progress.set(70, "Combining plots...")
-        
+        figLine.update_traces(opacity=0.5)
+
+    
+
         # add log axes
         if x_log:
             figLine.update_xaxes(type="log")
         if y_log:
             figLine.update_yaxes(type='log')
-          
-        #fig.update_layout(
-        #  xaxis=dict(range=[0, plot_df[x_var].max() * 1.1]),  # Adjust range as needed
-        #  yaxis=dict(range=[0, plot_df[y_var].max() * 1.1]),  # Adjust range as needed
-        #)
-    
+
         # Hide legend for figLine traces
+        figLine.update_layout(showlegend=False)
         for trace in figLine.data:
             trace.showlegend = False
+            
+        ########### COMBINE PLOTS
+        now_time = time.time()
+        print(f"created line graph time: {now_time - start_time} seconds")
+        progress.set(70, "Combining plots...")    
             
         # now integrate, traces, frames and layout
         fig = go.Figure(
@@ -421,23 +470,148 @@ def createCountryBubbleGraph(geographyLevel='countries',
         fig = figScatter
     
     
-    # Add flags to each frame
+    ########## CHANGE CUSTOM SETTINGS
+    progress.set(90, "custom settings...")
+    #first set fig traces then go frame by frame and 
+    # add flags or,
+    # add labels
+    # hovertext
+    # set settings xxx combine all frame by frames
+    
+    num_bubbles = len(plot_df[geography].unique())
+    
+
+    # Update inital data 
+    for trace in fig.data:
+        #set frame data for all traces
+        if trace.legendgroup == "Developed":
+            trace.legendgroup = "Developed                            "
+            trace.name = "Developed                            "
+        elif trace.legendgroup == "Latin America and the Carribean":
+            trace.legendgroup = "Latin America & Carribean"
+            trace.name = "Latin America & Carribean"
+        elif trace.legendgroup == "Developing Asia and Oceania":
+            trace.legendgroup = "Developing Asia & Oceania"
+            trace.name = "Developing Asia & Oceania"
+        
+        # set initial data for line traces
+        if trace.mode == 'lines':
+            trace.showlegend = False
+        
+        # set initial data for bubble data
+        else:
+            trace.showlegend = True
+            # if fewer than 20 bubbles, then plot all names
+            if num_bubbles <= 20:
+                tracetextpositions = []
+                for geography in trace.text:
+                    if geography in text_positions:
+                        tracetextpositions.append(text_positions[geography])
+                    else:
+                        tracetextpositions.append('top left')
+                trace.textposition = tracetextpositions
+                
+            # if more than 20 bubbles then keep only the named geographies
+            else:
+                tracetext = []
+                tracetextpositions = []
+                for geography in trace.text:
+                    if geography in text_positions:
+                        tracetext.append(geography)
+                        tracetextpositions.append(text_positions[geography])
+                    else:
+                        tracetext.append('')
+                        tracetextpositions.append('top left')
+                trace.text = tracetext
+                trace.textposition = tracetextpositions
+                
+    
+    # Update frame by frame
+    for frame in fig.frames:
+        #set traces in frame.data
+        for trace in frame.data:
+            #set frame data for all traces
+            if trace.legendgroup == "Developed":
+                trace.legendgroup = "Developed                            "
+                trace.name = "Developed                            "
+            elif trace.legendgroup == "Latin America and the Carribean":
+                trace.legendgroup = "Latin America & Carribean"
+                trace.name = "Latin America & Carribean"
+            elif trace.legendgroup == "Developing Asia and Oceania":
+                trace.legendgroup = "Developing Asia & Oceania"
+                trace.name = "Developing Asia & Oceania"
+            #print(frame.name)
+            
+            # set frame data for line traces
+            if trace.mode == 'lines':
+                trace.showlegend = False
+            
+            # set frame data for bubble traces
+            else:
+                trace.showlegend = True
+                # if fewer than 20 bubbles, then plot all names
+                if num_bubbles <= 20:
+                    tracetextpositions = []
+                    for geography in trace.text:
+                        if geography in text_positions:
+                            tracetextpositions.append(text_positions[geography])
+                        else:
+                            tracetextpositions.append('top left')
+                    trace.textposition = tracetextpositions
+                
+                # if more than 20 bubbles keep only names geographies
+                else:
+                    tracetext = []
+                    tracetextpositions = []
+                    for geography in trace.text:
+                        if geography in text_positions:
+                            tracetext.append(geography)
+                            tracetextpositions.append(text_positions[geography])
+                        else:
+                            tracetext.append('')
+                            tracetextpositions.append('top left')
+                    trace.text = tracetext
+                    trace.textposition = tracetextpositions
+
+        
+        #set annotations in frame
+        year = math.floor(float(frame.name))
+        new_annotation = go.layout.Annotation(
+            text=f"{year}",  # Annotation text showing the year
+            showarrow=False,  # No arrow pointing to a data point
+            xref="x",  # X position relative 'paper' or 'x' for 'data'
+            yref="y",  # Y position relative 'paper' or 'y' for 'data'
+            x=max_x * 0.95,  # X position (bottom right)
+            y=max_y * 0.05,  # Y position (bottom right)
+            font=dict(size=45, color="grey"),  # Font size and color
+            align="right"  # Align text to the right
+        )
+        if 'annotations' in frame.layout:
+            frame.layout.annotations += (new_annotation,)
+        else:
+            frame.layout.annotations = (new_annotation,)
+
+
+    #change label in slider steps
+    for step in fig.layout.sliders[0].steps:
+        step.label = math.floor(float(step.label))
+    
     full_index = pd.Index(geographies, name=geography)
     if geographyLevel == "countries" and not x_log and not y_log and show_flags:
-        progress.set(90, "adding flags...")
+        
         for frame in fig.frames: #frame = fig.frames[19]
             #print(frame.layout.images)
             year = frame.name
             #print(year)
             # Filter data for the specific year
             #if leave_trace:
-            #  year_data = plot_df[plot_df['year'] <= int(year)]
+            #  year_data = plot_df[plot_df['year'] <= floatyear)]
             #  ## add in NA rows for missing data
-            #  full_years = list(range(1970, int(year)+1))
+            #  full_years = list(range(1970, float(year)+1))
             #  full_index = pd.MultiIndex.from_product([countries, full_years], names=[geography, 'year'])
             #  year_data = year_data.set_index([geography, 'year']).reindex(full_index).reset_index()
             #else:
-            year_data = plot_df[plot_df['year'] == int(year)]
+            year_data = plot_df[plot_df['year'] == year]
             ## add in NA rows for missing data
      
             
@@ -480,67 +654,67 @@ def createCountryBubbleGraph(geographyLevel='countries',
                           'layer': "above"
                           }
                       )
-            # Update the layout of the frame to include the images
-            frame.layout.images = image_annotations
-            #print(frame.layout.images)
-            x_max_frame = year_data[x_var].max() + max_bubble_size_wanted
-            y_max_frame = year_data[y_var].max()  * 1.1
-            custom_xaxis = {'range': [0, x_max_frame]}
-            custom_yaxis = {'range': [0, y_max_frame]}
-            # Assign the custom axes to the frame's layout
-            # hashed out because makes plot jittery
-            # frame.layout.xaxis = custom_xaxis
-            # frame.layout.yaxis = custom_yaxis
+            
+            
+            
         now_time = time.time()
         print(f"added flags time: {now_time - start_time} seconds")
         progress.set(95, "printing plot...")
      
         
-    #### add year label on each frame
-    # Define the position for the annotation (bottom right corner)
-    annotation_x = max_x * 0.95  # X position (relative to the plot)
-    annotation_y = max_y * 0.05  # Y position (relative to the plot)
-    new_frames = []
-    # Loop over each frame and add a text annotation
-    for frame in fig.frames:
-        # Create a deep copy of the frame to modify
-        new_frame = go.Frame(data=frame.data, name=frame.name, layout=frame.layout)
-        # Add annotation for the current year
-        # Create the new annotation
-        new_annotation = go.layout.Annotation(
-            text=f"{frame.name}",  # Annotation text showing the year
-            showarrow=False,  # No arrow pointing to a data point
-            xref="x",  # X position relative 'paper' or 'x' for 'data'
-            yref="y",  # Y position relative 'paper' or 'y' for 'data'
-            x=annotation_x,  # X position (bottom right)
-            y=annotation_y,  # Y position (bottom right)
-            font=dict(size=45, color="grey"),  # Font size and color
-            align="right"  # Align text to the right
-        )
-        
-        # Check if the frame already has annotations and append the new one
-        if 'annotations' in new_frame.layout:
-            new_frame.layout.annotations += (new_annotation,)
-        else:
-            new_frame.layout.annotations = (new_annotation,)
-        # Append the frame with the annotation to the new_frames list
-        new_frames.append(new_frame)
-    fig.frames = new_frames
+    
 
-
+    ######## LABELS, AXES, AND SLIDER
+    #set some parameters
     y_var_label = labels.get(y_var, y_var)  # Default to y_var if not found in labels
     x_var_label = labels.get(x_var, x_var)  # Default to x_var if not found in labels
-    # Adjust layout for better appearance
+    buttons = [{
+        'buttons': [
+            {
+                'args': [None, {'frame': {'duration': 400/smoothness, 'redraw': True}, 'fromcurrent': True, 'mode': 'immediate', 'transition': {'duration': 400/smoothness}}],
+                'label': 'Play',
+                'method': 'animate'
+            },
+            {
+                'args': [[None], {'frame': {'duration': 400/smoothness, 'redraw': True}, 'mode': 'immediate', 'transition': {'duration': 400/smoothness}}],
+                'label': 'Pause',
+                'method': 'animate'
+            }
+        ],
+        'direction': 'left',
+        'pad': {'r': 10, 't': 87},
+        'showactive': False,
+        'type': 'buttons',
+        'x': 0.1,
+        'xanchor': 'right',
+        'y': 0,
+        'yanchor': 'top'
+    }]
+    sliders=[{
+        'active': 0,
+        #'currentvalue': {'prefix': 'Frame: '},
+        'x': 0.1,
+        'len': 0.9,
+        'pad': {'b': 10},
+    }]
+    
+    
+    # Adjust layout
     fig.update_layout(
         xaxis_title=x_var_label,
         yaxis_title=y_var_label,
-       # title=f"<h1>The glaring inequality of income and CO2 emissions</h1> <br> <h3>{y_var} vs {x_var}</h3>",
-        title={'text': f"<span style='font-size:28px;'><b>The glaring inequality of income and CO2 emissions</b></span><br><span style='font-size:18px;'><i>{y_var_label} vs {x_var_label}</i></span>",
+        title={'text': f"<span style='font-size:28px; font-family:Helvetica Neue LT Std 45 Light;'><b>The glaring inequality of income and CO2 emissions</b></span><br><span style='font-size:18px;'><i>{y_var_label} vs {x_var_label}</i></span>",
                'x': 0.08,
                'xanchor': 'left',},
         autosize=True,
         #width=1100,
         #height=700,
+        updatemenus=buttons,
+        #sliders=sliders,
+        title_font=dict(family="Helvetica Neue LT Std 45 Light", size=24, color="black"),
+        xaxis_title_font=dict(family="Helvetica Neue LT Std 45 Light", size=18, color="black"),
+        yaxis_title_font=dict(family="Helvetica Neue LT Std 45 Light", size=18, color="black"),
+        font=dict(family="Helvetica Neue LT Std 45 Light", size=14, color="black"),
     )
     
     if fixed_axes:
@@ -551,47 +725,8 @@ def createCountryBubbleGraph(geographyLevel='countries',
           yaxis=dict(range=[min_y, max_y])
           )
 
-
     
-    print(figScatter.layout)
-    print(fig.layout)
-        
-    
-    if True:
-        # Update layout 
-        fig.update_layout(
-            updatemenus=[{
-                'buttons': [
-                    {
-                        'args': [None, {'frame': {'duration': 400, 'redraw': True}, 'fromcurrent': True, 'mode': 'immediate', 'transition': {'duration': 400}}],
-                        'label': 'Play',
-                        'method': 'animate'
-                    },
-                    {
-                        'args': [[None], {'frame': {'duration': 400, 'redraw': True}, 'mode': 'immediate', 'transition': {'duration': 400}}],
-                        'label': 'Pause',
-                        'method': 'animate'
-                    }
-                ],
-                'direction': 'left',
-                'pad': {'r': 10, 't': 87},
-                'showactive': False,
-                'type': 'buttons',
-                'x': 0.1,
-                'xanchor': 'right',
-                'y': 0,
-                'yanchor': 'top'
-            }],
-        )
-  
-    
-    fig.update_layout(
-        title_font=dict(family="Helvetica Neue LT Std 45 Light", size=24, color="black"),
-        xaxis_title_font=dict(family="Helvetica Neue LT Std 45 Light", size=18, color="black"),
-        yaxis_title_font=dict(family="Helvetica Neue LT Std 45 Light", size=18, color="black"),
-        font=dict(family="Helvetica Neue LT Std 45 Light", size=14, color="black")
-    )
-    
+    ######### SAVE OR RETURN PLOT
     now_time = time.time()
     print(f"plot created time: {now_time - start_time} seconds")
     
@@ -599,6 +734,11 @@ def createCountryBubbleGraph(geographyLevel='countries',
     
     now_time = time.time()
     print(f"plot saved time: {now_time - start_time} seconds")
+    
+    
+    #print(figScatter.layout)
+    #print(fig.data)
+    # print(fig.layout)
     
     return(fig)
     

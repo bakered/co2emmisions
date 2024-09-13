@@ -64,7 +64,7 @@ g20_countries = ["ARG", "AUS", "BRA", "CAN", "CHN", "FRA", "DEU", "IND", "IDN",
 img_urls = [f'https://cdn.rawgit.com/lipis/flag-icon-css/master/flags/4x3/{country}.svg' for country in countries]
 
 #regions = ["LDCs", "Developed", "Developing"] 
-regions =  ["Developed", "Developing Asia", "Developing LAC", "Africa"]
+region1s = ["Developed", "Developing Asia and Oceania", "Latin America and the Carribean", "Africa"]
 
 
 labels = {"co2_per_capita": "CO2 per capita (Tons)",
@@ -128,6 +128,9 @@ app_ui = ui.page_fluid(
                 # Add a button
                 ui.tags.p("Click Plot button for changes to take effect:"),
                 ui.input_action_button(id="plot_button", label="Plot", class_="custom-green-button"),
+                ui.input_select(id="datasource", label="Data source:", 
+                                choices={"GCP and Maddison":"GCP and Maddison", "World Bank WDI":"World Bank WDI"},
+                                selected="GCP and Maddison"),
                 ui.input_select(id="geographyLevel", label="Geography:", 
                                 choices={"countries": "Countries", "regions": "Regions"},
                                 selected="countries"),
@@ -144,6 +147,7 @@ app_ui = ui.page_fluid(
                                 choices=labels,
                                 selected="co2"),
                 
+                ui.input_numeric(id="smoothness", label="Smoothness:", min=1, max=50, value=5),
                 ui.input_numeric(id="start_year", label="Start Year:", min=1820, max=2021, value=1951),
                 ui.input_action_button(id="select_all_countries", label="Select all countries"),
                 ui.input_action_button(id="select_g20", label="Select G20"),
@@ -174,39 +178,37 @@ app_ui = ui.page_fluid(
     )
 
 def server(input, output, session):  
-    @reactive.Calc
-    def update_geography_list():
-        if input.geographyLevel() == "countries":
-            return [countries2, countries2, "Show country:"]
-        else:
-            return [regions, regions, "Show region:"]
-        
+    
     # does this always react--- could make more efficient?    
     @reactive.effect
+    @reactive.event(input.geographyLevel)
     def _():
-        choices, selected, label = update_geography_list()
-        ui.update_selectize("geography_list", choices=choices, selected=selected, label=label)
         if input.geographyLevel() == "countries":
+            ui.update_selectize("geography_list", choices=countries2, selected=countries2, label="Show country:")
             ui.update_numeric("bubble_size", value =500000)
             ui.update_checkbox('leave_trace', value=False)
         else:
+            ui.update_selectize("geography_list", choices=region1s, selected=region1s, label="Show region:")
             ui.update_numeric("bubble_size", value =0)
             ui.update_checkbox('leave_trace', value=True)
        
     @reactive.Effect
     @reactive.event(input.select_all_countries)
     def select_all_countries():
-        if input.geographyLevel() == "countries":
-            ui.update_selectize("geography_list", selected=countries2)
-            ui.update_numeric("bubble_size", value =500000)
+        ui.update_select("geographyLevel", selected="countries")
+        ui.update_selectize("geography_list", choices=countries2, selected=countries2, label="Show country:")
+        ui.update_numeric("bubble_size", value =500000)
+        ui.update_checkbox('leave_trace', value=False)
 
     # Handle "Select G20" button click
     @reactive.Effect
     @reactive.event(input.select_g20)
     def select_g20_countries():
-        if input.geographyLevel() == "countries":
-            ui.update_selectize("geography_list", selected=g20_countries)
-            ui.update_numeric("bubble_size", value =500000)
+        ui.update_select("geographyLevel", selected="countries")
+        ui.update_selectize("geography_list", choices=countries2, selected=g20_countries, label="Show country:")
+        ui.update_numeric("bubble_size", value =500000)
+        ui.update_checkbox('leave_trace', value=False)
+        
         
     #@output
     #@render.plot
@@ -221,10 +223,12 @@ def server(input, output, session):
     async def plot():
         with ui.Progress(max=100) as progress:
             plot = createCountryBubbleGraph(
+                datasource=input.datasource(),
                 geographyLevel=input.geographyLevel(),
                 x_var=input.x_var(),
                 y_var=input.y_var(),
                 size_var=input.size_var(),
+                smoothness=input.smoothness(),
                 start_year=input.start_year(),
                 geography_list=input.geography_list(),
                 bubble_size=input.bubble_size(),
@@ -238,7 +242,8 @@ def server(input, output, session):
                 progress=progress,
             )
             # Generate the HTML string
-            html_content = plot.to_html(full_html=True, auto_play=True, default_width='90vw', default_height='90vh', div_id='id_plot-container')
+            animation_opts = {'frame': {'duration': 400/input.smoothness(), 'redraw': True},'transition': {'duration': 400/input.smoothness()}}
+            html_content = plot.to_html(full_html=True, auto_play=True, default_width='90vw', default_height='90vh', div_id='id_plot-container', animation_opts=animation_opts)
             
             #print(type(html_content))
             # Replace "Times New Roman" with "Helvetica Neue LT Std 45 Light"
