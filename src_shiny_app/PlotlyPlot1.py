@@ -9,7 +9,7 @@ from pathlib import Path
 #import copy
 import time
 import math
-
+import statsmodels.api as sm
 
 def weighted_percentile(values, weights, percentile): #values = plot_df[y_var][index_max_y]; weights=plot_df['pop'][index_max_y]; percentile=95
     """Compute the weighted percentile of a given list of values."""
@@ -37,8 +37,10 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
                              smoothness = 2,
                              leave_trace = True, 
                              fixed_axes = True,
-                             bubble_size=0,
+                             bubble_similarity=0,
                              flag_size= 1,
+                             bubble_size = 1,
+                             rolling_mean_years=10,
                              start_year=1950,
                              geography_list = [
                                  'ARG', 'AUS', 'BRA', 'CAN', 'CHN', 'FRA', 'DEU', 'IND', 'IDN', 
@@ -48,6 +50,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
                              y_log=False,
                              size_log=True,
                              show_flags=True,
+                             use_loess=True,
                              start_time=time.time(),
                              progress=None,
                              ):
@@ -151,10 +154,72 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         geography = 'ISO3'
     else:
         geography = 'region1'
+        region_to_image_link = {
+            "Africa": "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/africa_map.png",
+            "Developed": "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/developed_map.png",
+            "Developing Asia and Oceania": "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/asia_and_oceania_map.png",
+            "Latin America and the Carribean": "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/latin_america_and_the_caribbean_map.png"
+        }
 
+        # Use map() to create the new column 'image_link'
+        data['image_link'] = data['region1'].map(region_to_image_link)
+        
 
 
     ########## FILTER AND ORDER DATA
+    latin_america_countries = ["ABW", "AIA", "ARG", "ATG", "BES", "BHS", "BLZ", "BOL", "BRA", 
+                               "BRB", "CHL", "COL", "CRI", "CUB", "CUW", "DMA", "DOM", "ECU", 
+                               "GRD", "GTM", "GUY", "HND", "HTI", "JAM", "LCA", "MEX", "MSR", 
+                               "NIC", "PAN", "PER", "PRY", "SLV", "SUR", "SXM", "TCA", "TTO", 
+                               "URY", "VCT", "VEN", "VGB"]
+    african_countries = ["AGO", "BDI", "BEN", "BFA", "BWA", "CAF", "CIV", "CMR", "COD",
+                         "COG", "COM", "CPV", "DJI", "DZA", "EGY", "ERI", "ETH", "GAB", 
+                         "GHA", "GIN", "GMB", "GNB", "GNQ", "KEN", "LBR", "LBY", "LSO", 
+                         "MAR", "MDG", "MLI", "MOZ", "MRT", "MUS", "MWI", "NAM", "NER", 
+                         "NGA", "RWA", "SDN", "SEN", "SHN", "SLE", "SOM", "SSD", "STP", 
+                         "SWZ", "SYC", "TCD", "TGO", "TUN", "TZA", "UGA", "ZAF", "ZMB", 
+                         "ZWE"]
+    asia_countries = ["AFG", "ARE", "ARM", "AZE", "BGD", "BHR", "BRN", "BTN", "CHN", 
+                      "COK", "FJI", "FSM", "GEO", "HKG", "IDN", "IND", "IRN", "IRQ", 
+                      "JOR", "KAZ", "KGZ", "KHM", "KIR", "KWT", "LAO", "LBN", "LKA", 
+                      "MAC", "MDV", "MHL", "MMR", "MNG", "MYS", "NCL", "NIU", "NPL", 
+                      "NRU", "OMN", "PAK", "PHL", "PLW", "PNG", "PRK", "PSE", "PYF", 
+                      "QAT", "SAU", "SGP", "SLB", "SYR", "THA", "TJK", "TKM", "TLS", 
+                      "TON", "TUR", "TUV", "TWN", "UZB", "VNM", "VUT", "WLF", "WSM", 
+                      "YEM"]
+    developed_countries = ["ALB", "AND", "AUS", "AUT", "BEL", "BGR", "BIH", "BLR", "BMU", 
+                           "CAN", "CHE", "CYP", "CZE", "DEU", "DNK", "ESP", "EST", "FIN", 
+                           "FRA", "FRO", "GBR", "GRC", "GRL", "HRV", "HUN", "IRL", "ISL", 
+                           "ISR", "ITA", "JPN", "KOR", "LIE", "LTU", "LUX", "LVA", "MDA", 
+                           "MKD", "MLT", "MNE", "NLD", "NOR", "NZL", "POL", "PRT", "ROU", 
+                           "RUS", "SPM", "SRB", "SVK", "SVN", "SWE", "UKR", "USA"]
+    
+
+    geography_list = list(geography_list)
+    
+    if geographyLevel == "countries":
+        if "Latin America and the Carribean" in geography_list:
+            geography_list.remove("Latin America and the Carribean")  # Modify in place
+            geography_list += latin_america_countries
+            
+        if "Africa" in geography_list:
+            geography_list.remove("Africa")
+            geography_list += african_countries
+            
+        if "Developed" in geography_list:
+            geography_list.remove("Developed")
+            geography_list += developed_countries
+            
+        if "Developing Asia and Oceania" in geography_list:
+            geography_list.remove("Developing Asia and Oceania")
+            geography_list += asia_countries
+        
+        geography_list = list(set(geography_list))
+
+    
+    # Flatten the list in case it contains sublists
+    geography_list = [item for sublist in geography_list for item in (sublist if isinstance(sublist, list) else [sublist])]
+
     # Filter the DataFrame based on the list of ISO3 codes
     plot_df = data[(data[geography].isin(geography_list)) & (data['year'] > start_year)].copy()
     
@@ -208,16 +273,22 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         min_y = 0
         
     #deal with size of bubbles 
-    plot_df['bubble_size'] = np.where(plot_df[size_var] > 0, plot_df[size_var] + bubble_size, plot_df[size_var])
+    plot_df['bubble_size'] = np.where(plot_df[size_var] > 0, plot_df[size_var] + bubble_similarity, plot_df[size_var])
 
     plot_df['bubble_size'] = plot_df['bubble_size'].fillna(0)
-    scatter_size_max_parameter = 35
+    scatter_size_max_parameter = 60 * bubble_size
 
-    
+    # set parameter for flags
     if max_x>max_y:
-        max_bubble_size_wanted = (max_x/60)*flag_size
+        if geographyLevel == "countries":
+            max_bubble_size_wanted = (max_x/24)*flag_size
+        else:
+            max_bubble_size_wanted = (max_x/40)*flag_size
     else:
-        max_bubble_size_wanted = (max_y/30)*flag_size
+        if geographyLevel == "countries":
+            max_bubble_size_wanted = (max_y/12)*flag_size
+        else:
+            max_bubble_size_wanted = (max_y/20)*flag_size
     
     
     # Add normalised_size column such that the value is the diameter making 
@@ -279,7 +350,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     if geographyLevel == "countries":
         additional_cols = ['image_link', 'region1']
     else:
-        additional_cols = ['region1']
+        additional_cols = ['image_link', 'region1']
         
     plot_df = expand_dataframe(plot_df, 
                                n=smoothness, 
@@ -313,9 +384,9 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         )
         
         if not x_log and not y_log:
-            figScatter.update_traces(marker=dict(opacity=0.8))  # Set opacity to 0 for invisibility
+            figScatter.update_traces(marker=dict(opacity=1))  # Set opacity to 0 for invisibility
         else:
-            figScatter.update_traces(marker=dict(opacity=0.8))
+            figScatter.update_traces(marker=dict(opacity=1))
             
         
 
@@ -336,7 +407,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         )
         
         figScatter.update_traces(textposition='top right')
-        figScatter.update_traces(marker=dict(opacity=0.8))
+        figScatter.update_traces(marker=dict(opacity=1))
         
         
         
@@ -396,14 +467,48 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     
     if leave_trace:
         # xxxxx add a line of best fit : smooth curve..or pre-calculate and save in data?
-        #  Loop over each year in the DataFrame
+
+       
+
+
+        if use_loess:
+            def loess_smoothing(x, y, frac=0.3):
+                # Apply LOESS (Locally Weighted Scatterplot Smoothing)
+                loess_model = sm.nonparametric.lowess(y, x, frac=frac)
+                return loess_model[:, 1]
+            
+            # Group by 'geography' and apply LOESS smoothing to 'y_var' over 'year'
+            plot_df_line = pd.DataFrame()
+            for geog, group in plot_df.groupby(geography):
+                # Apply LOESS smoothing for y_var (you can adjust frac for smoother/less smooth fit)
+                group[x_var] = loess_smoothing(group['year'], group[x_var], frac=0.3)
+                group[y_var] = loess_smoothing(group['year'], group[y_var], frac=0.3)
+                # Append smoothed data to a new DataFrame
+                plot_df_line = pd.concat([plot_df_line, group], axis=0)
+        else:
+            
+            plot_df_line = pd.DataFrame()
+            for geog, group in plot_df.groupby(geography):
+                print(geog)
+                print(group[x_var])
+                group[x_var] = group[x_var].rolling(rolling_mean_years).mean()
+                print(group[x_var])
+                print(group[y_var])
+                group[y_var] = group[y_var].rolling(rolling_mean_years).mean()
+                print(group[y_var])
+                
+                plot_df_line = pd.concat([plot_df_line, group], axis=0)
+            
+        
         expanded_rows = pd.DataFrame()
-        for year in plot_df['year'].unique(): # year=plot_df['year'].unique()[12]
+        for year in plot_df_line['year'].unique(): # year=plot_df['year'].unique()[12]
             # Filter the rows for the current year and all previous years
-            filtered_rows = plot_df[plot_df['year'].astype(float) <= float(year)].copy()
+            filtered_rows = plot_df_line[plot_df_line['year'].astype(float) <= float(year)].copy()
             filtered_rows.loc[:, 'year'] = year
             # Append these rows to the list
             expanded_rows = pd.concat([expanded_rows, filtered_rows], axis=0, ignore_index=True)
+        
+        
         
         #print(expanded_rows[expanded_rows['ISO3'] =="JPN"])
         
@@ -424,8 +529,9 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             animation_frame='year',
             template="plotly_white"
             )
+        figLine.update_traces(line={'width': 5})
         figLine.update_traces(hoverinfo='skip', hovertemplate=None)
-        figLine.update_traces(opacity=0.5)
+        figLine.update_traces(opacity=0.2)
 
     
 
@@ -599,30 +705,16 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         step.label = math.floor(float(step.label))
     
     full_index = pd.Index(geographies, name=geography)
-    if geographyLevel == "countries": # and not x_log and not y_log and show_flags:
+    if show_flags:
+        progress.set(90, "adding flags...")
         
         for frame in fig.frames: #frame = fig.frames[19]
-            #print(frame.layout.images)
             year = frame.name
-            print(year)
-            # Filter data for the specific year
-            #if leave_trace:
-            #  year_data = plot_df[plot_df['year'] <= floatyear)]
-            #  ## add in NA rows for missing data
-            #  full_years = list(range(1970, float(year)+1))
-            #  full_index = pd.MultiIndex.from_product([countries, full_years], names=[geography, 'year'])
-            #  year_data = year_data.set_index([geography, 'year']).reindex(full_index).reset_index()
-            #else:
-
             year_data = plot_df[plot_df['year'] == float(year)]
             ## add in NA rows for missing data
-     
-            print(year_data)
             year_data = year_data.set_index(geography).reindex(full_index).reset_index()
-            print(year_data)
+
             # Create list of image annotations for this year
-            
-            
             image_annotations = []
             for i, row in year_data.iterrows():
                 if x_log:
@@ -669,7 +761,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
                           )
             
             frame.layout.images = image_annotations
-            print(frame.layout.images)
+            #print(frame.layout.images)
             
         now_time = time.time()
         print(f"added flags time: {now_time - start_time} seconds")

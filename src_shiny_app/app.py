@@ -36,6 +36,28 @@ countries = [
     "mo", "ws", "fj", "to", "fm", "tl", "nc", "tv", "gt", "vu", "nr",
     "mp", "pw", "nu", "ck", "sh", "wf"
 ]
+countries = [
+    "AW", "AF", "AO", "AI", "AL", "AD", "AE", "AR", "AM", "AG", 
+    "AU", "AT", "AZ", "BI", "BE", "BJ", "BQ", "BF", "BD", "BG", "BH", 
+    "BS", "BA", "BY", "BZ", "BM", "BO", "BR", "BB", "BN", "BT", "BW", 
+    "CF", "CA", "CH", "CL", "CN", "CI", "CM", "CD", "CG", "CK", "CO", 
+    "KM", "CV", "CR", "CU", "CW", "CY", "CZ", "DE", "DJ", "DM", "DK", 
+    "DO", "DZ", "EC", "EG", "ER", "ES", "EE", "ET", "FI", "FJ", "FR", 
+    "FO", "FM", "GA", "GB", "GE", "GH", "GN", "GM", "GW", "GQ", "GR", 
+    "GD", "GL", "GT", "GY", "HK", "HN", "HR", "HT", "HU", "ID", "IN", 
+    "IE", "IR", "IQ", "IS", "IL", "IT", "JM", "JO", "JP", "KZ", "KE", 
+    "KG", "KH", "KI", "KR", "KW", "LA", "LB", "LR", "LY", "LC", "LI", 
+    "LK", "LS", "LT", "LU", "LV", "MO", "MA", "MD", "MG", "MV", "MX", 
+    "MH", "MK", "ML", "MT", "MM", "ME", "MN", "MZ", "MR", "MS", "MU", 
+    "MW", "MY", "NA", "NC", "NE", "NG", "NI", "NU", "NL", "NO", "NP", 
+    "NR", "NZ", "OM", "PK", "PA", "PE", "PH", "PW", "PG", "PL", "KP", 
+    "PT", "PY", "PS", "PF", "QA", "RO", "RU", "RW", "SA", "SD", "SN", 
+    "SG", "SH", "SB", "SL", "SV", "SO", "PM", "RS", "SS", "ST", "SR", 
+    "SK", "SI", "SE", "SZ", "SX", "SC", "SY", "TC", "TD", "TG", "TH", 
+    "TJ", "TM", "TL", "TO", "TT", "TN", "TR", "TV", "TW", "TZ", "UG", 
+    "UA", "UY", "US", "UZ", "VC", "VE", "VG", "VN", "VU", "WF", "WS", 
+    "YE", "ZA", "ZM", "ZW"
+    ]
 
 countries2 = [
     "CHN", "SGP", "MYS", "BRN", "JPN", "AUS", "USA", "CAN", "IRN",
@@ -58,6 +80,33 @@ countries2 = [
     "TLS", "NCL", "TUV", "GTM", "VUT", "NRU", "MNP", "PLW", "NIU", "COK",
     "SHN", "WLF"
 ]
+
+
+countries2 = ["ABW", "AFG", "AGO", "AIA", "ALB", "AND", "ARE", "ARG", "ARM", 
+              "ATG", "AUS", "AUT", "AZE", "BDI", "BEL", "BEN", "BES", "BFA", 
+              "BGD", "BGR", "BHR", "BHS", "BIH", "BLR", "BLZ", "BMU", "BOL", 
+              "BRA", "BRB", "BRN", "BTN", "BWA", "CAF", "CAN", "CHE", "CHL", 
+              "CHN", "CIV", "CMR", "COD", "COG", "COK", "COL", "COM", "CPV", 
+              "CRI", "CUB", "CUW", "CYP", "CZE", "DEU", "DJI", "DMA", "DNK", 
+              "DOM", "DZA", "ECU", "EGY", "ERI", "ESP", "EST", "ETH", "FIN", 
+              "FJI", "FRA", "FRO", "FSM", "GAB", "GBR", "GEO", "GHA", "GIN", 
+              "GMB", "GNB", "GNQ", "GRC", "GRD", "GRL", "GTM", "GUY", "HKG", 
+              "HND", "HRV", "HTI", "HUN", "IDN", "IND", "IRL", "IRN", "IRQ", 
+              "ISL", "ISR", "ITA", "JAM", "JOR", "JPN", "KAZ", "KEN", "KGZ", 
+              "KHM", "KIR", "KOR", "KWT", "LAO", "LBN", "LBR", "LBY", "LCA", 
+              "LIE", "LKA", "LSO", "LTU", "LUX", "LVA", "MAC", "MAR", "MDA", 
+              "MDG", "MDV", "MEX", "MHL", "MKD", "MLI", "MLT", "MMR", "MNE", 
+              "MNG", "MOZ", "MRT", "MSR", "MUS", "MWI", "MYS", "NAM", "NCL", 
+              "NER", "NGA", "NIC", "NIU", "NLD", "NOR", "NPL", "NRU", "NZL", 
+              "OMN", "PAK", "PAN", "PER", "PHL", "PLW", "PNG", "POL", "PRK", 
+              "PRT", "PRY", "PSE", "PYF", "QAT", "ROU", "RUS", "RWA", "SAU", 
+              "SDN", "SEN", "SGP", "SHN", "SLB", "SLE", "SLV", "SOM", "SPM", 
+              "SRB", "SSD", "STP", "SUR", "SVK", "SVN", "SWE", "SWZ", "SXM", 
+              "SYC", "SYR", "TCA", "TCD", "TGO", "THA", "TJK", "TKM", "TLS", 
+              "TON", "TTO", "TUN", "TUR", "TUV", "TWN", "TZA", "UGA", "UKR", 
+              "URY", "USA", "UZB", "VCT", "VEN", "VGB", "VNM", "VUT", "WLF", 
+              "WSM", "YEM", "ZAF", "ZMB", "ZWE"]
+
 g20_countries = ["ARG", "AUS", "BRA", "CAN", "CHN", "FRA", "DEU", "IND", "IDN", 
           "ITA", "JPN", "MEX", "RUS", "SAU", "ZAF", "KOR", "TUR", "GBR", "USA"]
 
@@ -152,18 +201,24 @@ app_ui = ui.page_fluid(
                 ui.input_action_button(id="select_all_countries", label="Select all countries"),
                 ui.input_action_button(id="select_g20", label="Select G20"),
                 ui.input_selectize(id="geography_list", label="Show country:", 
-                                   choices=countries2,
+                                   choices=region1s+countries2,
                                    multiple=True, 
-                                   selected=g20_countries #countries2
+                                   selected=countries2
                                    ),
                 
-                ui.input_numeric(id="bubble_size", label="Bubble parameter (increase to make bubbles more similar): ", min=0, value=500000),
+                ui.input_numeric(id="bubble_similarity", label="Bubble similar size (increase to make bubbles more similar): ", min=0, value=1000000),
                 ui.input_numeric(id="flag_size", label="Flag size: (x times bigger)", min=0.01, max=100, value=1),
+                ui.input_numeric(id="bubble_size", label="Bubble size: (x times bigger)", min=0.01, max=100, value=1),
+                ui.input_numeric(id="rolling_mean_years", label="Rolling mean for trace line", min=1, max=100, value=1),
+                
                 ui.input_checkbox(id="fixed_axes", label="Fixed Axes", value=True),
                 ui.input_checkbox(id="leave_trace", label="Leave Trace", value=False),
-                ui.input_checkbox(id="x_log", label="x axis log", value=False),
+                ui.input_checkbox(id="x_log", label="x axis log", value=True),
                 ui.input_checkbox(id="y_log", label="y axis log", value=False),
-                ui.input_checkbox(id="show_flags", label="Show Flags", value=False),
+                ui.input_checkbox(id="show_flags", label="Show Flags", value=True),
+                ui.input_checkbox(id="use_loess", label="Use loess for lines", value=True),
+                
+                
                 bg="#f8f8f8", open="closed",
                 ),
             ui.tags.style("""
@@ -185,20 +240,20 @@ def server(input, output, session):
     @reactive.event(input.geographyLevel)
     def _():
         if input.geographyLevel() == "countries":
-            ui.update_selectize("geography_list", choices=countries2, selected=countries2, label="Show country:")
-            ui.update_numeric("bubble_size", value =500000)
+            ui.update_selectize("geography_list", choices=region1s+countries2, selected=countries2, label="Show country:")
+            ui.update_numeric("bubble_similarity", value =1000000)
             ui.update_checkbox('leave_trace', value=False)
         else:
             ui.update_selectize("geography_list", choices=region1s, selected=region1s, label="Show region:")
-            ui.update_numeric("bubble_size", value =0)
+            ui.update_numeric("bubble_similarity", value =1000000)
             ui.update_checkbox('leave_trace', value=True)
        
     @reactive.Effect
     @reactive.event(input.select_all_countries)
     def select_all_countries():
         ui.update_select("geographyLevel", selected="countries")
-        ui.update_selectize("geography_list", choices=countries2, selected=countries2, label="Show country:")
-        ui.update_numeric("bubble_size", value =500000)
+        ui.update_selectize("geography_list", choices=region1s+countries2, selected=countries2, label="Show country:")
+        ui.update_numeric("bubble_similarity", value =1000000)
         ui.update_checkbox('leave_trace', value=False)
 
     # Handle "Select G20" button click
@@ -206,8 +261,8 @@ def server(input, output, session):
     @reactive.event(input.select_g20)
     def select_g20_countries():
         ui.update_select("geographyLevel", selected="countries")
-        ui.update_selectize("geography_list", choices=countries2, selected=g20_countries, label="Show country:")
-        ui.update_numeric("bubble_size", value =500000)
+        ui.update_selectize("geography_list", choices=region1s+countries2, selected=g20_countries, label="Show country:")
+        ui.update_numeric("bubble_similarity", value =1000000)
         ui.update_checkbox('leave_trace', value=False)
         
         
@@ -230,8 +285,10 @@ def server(input, output, session):
                 y_var=input.y_var(),
                 size_var=input.size_var(),
                 smoothness=input.smoothness(),
+                rolling_mean_years=input.rolling_mean_years(),
                 start_year=input.start_year(),
                 geography_list=input.geography_list(),
+                bubble_similarity=input.bubble_similarity(),
                 bubble_size=input.bubble_size(),
                 flag_size=input.flag_size(),
                 fixed_axes=input.fixed_axes(),
@@ -239,6 +296,7 @@ def server(input, output, session):
                 x_log=input.x_log(),
                 y_log=input.y_log(),
                 show_flags=input.show_flags(),
+                use_loess=input.use_loess(),
                 start_time=start_time,
                 progress=progress,
             )
