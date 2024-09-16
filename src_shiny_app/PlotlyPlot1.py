@@ -215,25 +215,25 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
 
     
     if max_x>max_y:
-        max_bubble_size_wanted = (max_x/10)*flag_size
+        max_bubble_size_wanted = (max_x/60)*flag_size
     else:
-        max_bubble_size_wanted = (max_y/5)*flag_size
+        max_bubble_size_wanted = (max_y/30)*flag_size
     
     
-    # Add normalized_size column such that the value is the diameter making 
-    plot_df[size_var] = plot_df[size_var].fillna(0)
-    plot_df.loc[:, 'normalized_size'] = 2 * np.sqrt(plot_df[size_var] /np.pi) 
-    co2_max = plot_df['normalized_size'].max()
+    # Add normalised_size column such that the value is the diameter making 
+    plot_df.loc[:, 'normalised_size'] = 2 * np.sqrt(plot_df['bubble_size'] /np.pi) 
+    co2_max = plot_df['normalised_size'].max()
     # scale column such that the co2_max will be the size of the bubble you want measured in x-axis units. 
     # (warning: i think only works if x-axis is larger than y-axis)
-    plot_df.loc[:, 'normalized_size'] *= (max_bubble_size_wanted / co2_max)
+    plot_df.loc[:, 'normalised_size'] *= (max_bubble_size_wanted / co2_max)
+    
     
     #this is used later in flag addition
     geographies = plot_df[geography].unique()
     
     ########## ADD SMOOTHING
     progress.set(5, "Adding smoothness...")
-    def expand_dataframe(df, n, geography, year, x_var, y_var, bubble_size, additional_cols):
+    def expand_dataframe(df, n, geography, year, x_var, y_var, bubble_size, normalised_size, additional_cols):
         # Create an empty list to store the results
         expanded_rows = []
     
@@ -259,7 +259,8 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
                         year: row_start[year] * (1 - alpha) + row_end[year] * alpha,
                         x_var: row_start[x_var] * (1 - alpha) + row_end[x_var] * alpha,
                         y_var: row_start[y_var] * (1 - alpha) + row_end[y_var] * alpha,
-                        bubble_size: row_start[bubble_size] * (1 - alpha) + row_end[bubble_size] * alpha
+                        bubble_size: row_start[bubble_size] * (1 - alpha) + row_end[bubble_size] * alpha,
+                        normalised_size: row_start[normalised_size] * (1 - alpha) + row_end[normalised_size] * alpha,
                     }
                    
                     # Keep additional columns (like image_link and region1) unchanged
@@ -287,6 +288,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
                                x_var=x_var, 
                                y_var=y_var, 
                                bubble_size='bubble_size',
+                               normalised_size = 'normalised_size',
                                additional_cols = additional_cols
                                )
     
@@ -504,9 +506,9 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             # if fewer than 20 bubbles, then plot all names
             if num_bubbles <= 20:
                 tracetextpositions = []
-                for geography in trace.text:
-                    if geography in text_positions:
-                        tracetextpositions.append(text_positions[geography])
+                for listed_geog in trace.text:
+                    if listed_geog in text_positions:
+                        tracetextpositions.append(text_positions[listed_geog])
                     else:
                         tracetextpositions.append('top left')
                 trace.textposition = tracetextpositions
@@ -515,10 +517,10 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             else:
                 tracetext = []
                 tracetextpositions = []
-                for geography in trace.text:
-                    if geography in text_positions:
-                        tracetext.append(geography)
-                        tracetextpositions.append(text_positions[geography])
+                for listed_geog in trace.text:
+                    if listed_geog in text_positions:
+                        tracetext.append(listed_geog)
+                        tracetextpositions.append(text_positions[listed_geog])
                     else:
                         tracetext.append('')
                         tracetextpositions.append('top left')
@@ -552,9 +554,9 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
                 # if fewer than 20 bubbles, then plot all names
                 if num_bubbles <= 20:
                     tracetextpositions = []
-                    for geography in trace.text:
-                        if geography in text_positions:
-                            tracetextpositions.append(text_positions[geography])
+                    for listed_geog in trace.text:
+                        if listed_geog in text_positions:
+                            tracetextpositions.append(text_positions[listed_geog])
                         else:
                             tracetextpositions.append('top left')
                     trace.textposition = tracetextpositions
@@ -563,10 +565,10 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
                 else:
                     tracetext = []
                     tracetextpositions = []
-                    for geography in trace.text:
-                        if geography in text_positions:
-                            tracetext.append(geography)
-                            tracetextpositions.append(text_positions[geography])
+                    for listed_geog in trace.text:
+                        if listed_geog in text_positions:
+                            tracetext.append(listed_geog)
+                            tracetextpositions.append(text_positions[listed_geog])
                         else:
                             tracetext.append('')
                             tracetextpositions.append('top left')
@@ -597,12 +599,12 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         step.label = math.floor(float(step.label))
     
     full_index = pd.Index(geographies, name=geography)
-    if geographyLevel == "countries" and not x_log and not y_log and show_flags:
+    if geographyLevel == "countries": # and not x_log and not y_log and show_flags:
         
         for frame in fig.frames: #frame = fig.frames[19]
             #print(frame.layout.images)
             year = frame.name
-            #print(year)
+            print(year)
             # Filter data for the specific year
             #if leave_trace:
             #  year_data = plot_df[plot_df['year'] <= floatyear)]
@@ -611,51 +613,63 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             #  full_index = pd.MultiIndex.from_product([countries, full_years], names=[geography, 'year'])
             #  year_data = year_data.set_index([geography, 'year']).reindex(full_index).reset_index()
             #else:
-            year_data = plot_df[plot_df['year'] == year]
+
+            year_data = plot_df[plot_df['year'] == float(year)]
             ## add in NA rows for missing data
      
-            
+            print(year_data)
             year_data = year_data.set_index(geography).reindex(full_index).reset_index()
-      
+            print(year_data)
             # Create list of image annotations for this year
+            
+            
             image_annotations = []
             for i, row in year_data.iterrows():
-              if pd.isna(row['image_link']):
-                image_annotations.append(
+                if x_log:
+                    x_position = np.log10(row[x_var])
+                else:
+                    x_position = row[x_var]
+                if y_log:
+                    y_position = np.log10(row[y_var])
+                else:
+                    y_position = row[y_var]
+                if pd.isna(row['image_link']):
+                    image_annotations.append(
+                          {
+                            'source': "https://hatscripts.github.io/circle-flags/flags/gb.svg",
+                            'xref': "x",
+                            'yref': "y",
+                            'x': 0,
+                            'y': 0,
+                            'sizex': 0,
+                            'sizey': 0,
+                            'xanchor': "center",
+                            'yanchor': "middle",
+                            'sizing': "contain",
+                            'opacity': 1,
+                            'layer': "above"
+                            }
+                          )
+                else:
+                    image_annotations.append(
                       {
-                        'source': "https://hatscripts.github.io/circle-flags/flags/gb.svg",
-                        'xref': "x",
-                        'yref': "y",
-                        'x': 0,
-                        'y': 0,
-                        'sizex': 0,
-                        'sizey': 0,
-                        'xanchor': "center",
-                        'yanchor': "middle",
-                        'sizing': "contain",
-                        'opacity': 0.8,
-                        'layer': "above"
-                        }
-                      )
-              else:
-                image_annotations.append(
-                  {
-                          'source': row['image_link'],
-                          'xref': "x",
-                          'yref': "y",
-                          'x': row[x_var],
-                          'y': row[y_var],
-                          'sizex': row['normalized_size'],
-                          'sizey': row['normalized_size'],
-                          'xanchor': "center",
-                          'yanchor': "middle",
-                          'sizing': "contain",
-                          'opacity': 0.8,
-                          'layer': "above"
-                          }
-                      )
+                              'source': row['image_link'],
+                              'xref': "x",
+                              'yref': "y",
+                              'x': x_position,
+                              'y': y_position,
+                              'sizex': row['normalised_size'],
+                              'sizey': row['normalised_size'],
+                              'xanchor': "center",
+                              'yanchor': "middle",
+                              'sizing': "contain",
+                              'opacity': 1,
+                              'layer': "above"
+                              }
+                          )
             
-            
+            frame.layout.images = image_annotations
+            print(frame.layout.images)
             
         now_time = time.time()
         print(f"added flags time: {now_time - start_time} seconds")
@@ -671,12 +685,12 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     buttons = [{
         'buttons': [
             {
-                'args': [None, {'frame': {'duration': 400/smoothness, 'redraw': True}, 'fromcurrent': True, 'mode': 'immediate', 'transition': {'duration': 400/smoothness}}],
+                'args': [None, {'frame': {'duration': 400/smoothness, 'redraw': True}, 'fromcurrent': True, 'mode': 'immediate', 'transition': {'duration': 0/smoothness}}],
                 'label': 'Play',
                 'method': 'animate'
             },
             {
-                'args': [[None], {'frame': {'duration': 400/smoothness, 'redraw': True}, 'mode': 'immediate', 'transition': {'duration': 400/smoothness}}],
+                'args': [[None], {'frame': {'duration': 400/smoothness, 'redraw': True}, 'mode': 'immediate', 'transition': {'duration': 0/smoothness}}],
                 'label': 'Pause',
                 'method': 'animate'
             }

@@ -154,13 +154,14 @@ app_ui = ui.page_fluid(
                 ui.input_selectize(id="geography_list", label="Show country:", 
                                    choices=countries2,
                                    multiple=True, 
-                                   selected=countries2),
+                                   selected=g20_countries #countries2
+                                   ),
                 
                 ui.input_numeric(id="bubble_size", label="Bubble parameter (increase to make bubbles more similar): ", min=0, value=500000),
                 ui.input_numeric(id="flag_size", label="Flag size: (x times bigger)", min=0.01, max=100, value=1),
                 ui.input_checkbox(id="fixed_axes", label="Fixed Axes", value=True),
                 ui.input_checkbox(id="leave_trace", label="Leave Trace", value=False),
-                ui.input_checkbox(id="x_log", label="x axis log", value=True),
+                ui.input_checkbox(id="x_log", label="x axis log", value=False),
                 ui.input_checkbox(id="y_log", label="y axis log", value=False),
                 ui.input_checkbox(id="show_flags", label="Show Flags", value=False),
                 bg="#f8f8f8", open="closed",
@@ -242,7 +243,7 @@ def server(input, output, session):
                 progress=progress,
             )
             # Generate the HTML string
-            animation_opts = {'frame': {'duration': 400/input.smoothness(), 'redraw': True},'transition': {'duration': 400/input.smoothness()}}
+            animation_opts = {'frame': {'duration': 400/input.smoothness(), 'redraw': True},'transition': {'duration': 0/input.smoothness()}}
             html_content = plot.to_html(full_html=True, auto_play=True, default_width='90vw', default_height='90vh', div_id='id_plot-container', animation_opts=animation_opts)
             
             #print(type(html_content))
