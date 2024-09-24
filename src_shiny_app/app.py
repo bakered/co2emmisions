@@ -18,25 +18,6 @@ start_time = time.time()
 #from shinywidgets import output_widget, render_widget  
 
 countries = [
-    "un", "cn", "sg", "my", "bn", "jp", "au", "us", "ca", "ir", "om",
-    "bd", "pg", "vn", "kr", "tw", "hk", "id", "za", "sn", "ph", "ru",
-    "eg", "il", "tr", "ro", "it", "mc", "gr", "bg", "in", "lk", "mt",
-    "sa", "nl", "be", "th", "fr", "de", "kh", "mm", "kw", "iq", "ki",
-    "mh", "mx", "ae", "bj", "gh", "dj", "mz", "sc", "gn", "sb", "gy",
-    "bb", "lc", "es", "ch", "ao", "ye", "ge", "ua", "mu", "gw", "as",
-    "pl", "is", "no", "ma", "tg", "ng", "se", "dk", "gb", "ga", "so",
-    "cm", "tt", "bs", "hr", "fi", "pa", "ec", "ar", "ve", "vc", "sr",
-    "gd", "kn", "tc", "ag", "ht", "me", "at", "hu", "sk", "st", "vg",
-    "do", "bz", "pt", "hn", "co", "cr", "br", "ni", "al", "ee", "sd",
-    "lb", "jo", "ly", "cy", "qa", "cl", "lv", "lt", "sy", "md", "ci",
-    "tn", "dz", "fo", "gl", "uy", "ie", "km", "tz", "lr", "cv", "bh",
-    "tm", "az", "kz", "si", "gi", "py", "ky", "cu", "jm", "kp", "mr",
-    "gq", "ke", "rs", "pk", "ms", "mv", "gu", "cg", "gm", "fk", "eh",
-    "sl", "mg", "aw", "pe", "pf", "nz", "dm", "bm", "er", "sv", "cd",
-    "mo", "ws", "fj", "to", "fm", "tl", "nc", "tv", "gt", "vu", "nr",
-    "mp", "pw", "nu", "ck", "sh", "wf"
-]
-countries = [
     "AW", "AF", "AO", "AI", "AL", "AD", "AE", "AR", "AM", "AG", 
     "AU", "AT", "AZ", "BI", "BE", "BJ", "BQ", "BF", "BD", "BG", "BH", 
     "BS", "BA", "BY", "BZ", "BM", "BO", "BR", "BB", "BN", "BT", "BW", 
@@ -58,29 +39,6 @@ countries = [
     "UA", "UY", "US", "UZ", "VC", "VE", "VG", "VN", "VU", "WF", "WS", 
     "YE", "ZA", "ZM", "ZW"
     ]
-
-countries2 = [
-    "CHN", "SGP", "MYS", "BRN", "JPN", "AUS", "USA", "CAN", "IRN",
-    "OMN", "BGD", "PNG", "VNM", "KOR", "TWN", "HKG", "IDN", "ZAF", "SEN",
-    "PHL", "RUS", "EGY", "ISR", "TUR", "ROU", "ITA", "MCO", "GRC", "BGR",
-    "IND", "LKA", "MLT", "SAU", "NLD", "BEL", "THA", "FRA", "DEU", "KHM",
-    "MMR", "KWT", "IRQ", "KIR", "MHL", "MEX", "ARE", "BEN", "GHA", "DJI",
-    "MOZ", "SYC", "GIN", "SLB", "GUY", "BRB", "LCA", "ESP", "CHE", "AGO",
-    "YEM", "GEO", "UKR", "MUS", "GNB", "ASM", "POL", "ISL", "NOR", "MAR",
-    "TGO", "NGA", "SWE", "DNK", "GBR", "GAB", "SOM", "CMR", "TTO", "BHS",
-    "HRV", "FIN", "PAN", "ECU", "ARG", "VEN", "VCT", "SUR", "GRD", "KNA",
-    "TCA", "ATG", "HTI", "MNE", "AUT", "HUN", "SVK", "STP", "VGB", "DOM",
-    "BLZ", "PRT", "HND", "COL", "CRI", "BRA", "NIC", "ALB", "EST", "SDN",
-    "LBN", "JOR", "LBY", "CYC", "QAT", "CHL", "LVA", "LTU", "SYR", "MDA",
-    "CIV", "TUN", "DZA", "FRO", "GRL", "URY", "IRL", "COM", "TZA", "LBR",
-    "CPV", "BHR", "TKM", "AZE", "KAZ", "SVN", "GIB", "PRY", "CYM", "CUB",
-    "JAM", "PRK", "MRT", "GNQ", "KEN", "SRB", "PAK", "MSR", "MDV", "GUM",
-    "COG", "GMB", "FLK", "ESH", "SLE", "MDG", "ABW", "PER", "PYF", "NZL",
-    "DMA", "BMU", "ERI", "SLV", "COD", "MAC", "WSM", "FJI", "TON", "FSM",
-    "TLS", "NCL", "TUV", "GTM", "VUT", "NRU", "MNP", "PLW", "NIU", "COK",
-    "SHN", "WLF"
-]
-
 
 countries2 = ["ABW", "AFG", "AGO", "AIA", "ALB", "AND", "ARE", "ARG", "ARM", 
               "ATG", "AUS", "AUT", "AZE", "BDI", "BEL", "BEN", "BES", "BFA", 
@@ -113,7 +71,7 @@ g20_countries = ["ARG", "AUS", "BRA", "CAN", "CHN", "FRA", "DEU", "IND", "IDN",
 img_urls = [f'https://cdn.rawgit.com/lipis/flag-icon-css/master/flags/4x3/{country}.svg' for country in countries]
 
 #regions = ["LDCs", "Developed", "Developing"] 
-region1s = ["Developed", "Developing Asia and Oceania", "Latin America and the Carribean", "Africa"]
+region1s = ["Developed", "Developing Asia and Oceania", "Latin America and the Caribbean", "Africa"]
 
 
 labels = {"co2_per_capita": "CO2 per capita (Tons)",
@@ -124,14 +82,19 @@ labels = {"co2_per_capita": "CO2 per capita (Tons)",
          "gdp": "GDP (Millions)", 
           }
 
-gochi_font_css = """
-<style type="text/css">
+font_css = """
+    <style type="text/css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    
     @font-face {
         font-family: 'Helvetica Neue LT Std 45 Light';
         src: url('https://github.com/esambino/H_and_L/blob/master/font/helvetica-neue-lt-std-45-light.otf') format("opentype"); 
     }
+    
     body {
-        font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif; 
+        font-family: "Inter", "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif; 
     }
 </style>
 """
@@ -140,7 +103,12 @@ gochi_font_css = """
 
 
 app_ui = ui.page_fluid(
-    ui.HTML(gochi_font_css),
+    ui.tags.link(
+        #href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap",
+        href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
+        rel="stylesheet"
+    ),
+    ui.HTML(font_css),
     ui.tags.style("""
                   
         .js-plotly-plot,
@@ -168,7 +136,7 @@ app_ui = ui.page_fluid(
         aside textarea,
         aside label,
         aside select {
-            font-family: "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;  
+            font-family: "Inter", "HelveticaNeue-Light", "Helvetica Neue Light", "Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif;  
         }
         
     """),
@@ -215,7 +183,7 @@ app_ui = ui.page_fluid(
                 ui.input_checkbox(id="leave_trace", label="Leave Trace", value=False),
                 ui.input_checkbox(id="x_log", label="x axis log", value=True),
                 ui.input_checkbox(id="y_log", label="y axis log", value=False),
-                ui.input_checkbox(id="show_flags", label="Show Flags", value=True),
+                ui.input_checkbox(id="show_flags", label="Show Flags", value=False),
                 ui.input_checkbox(id="use_loess", label="Use loess for lines", value=True),
                 
                 
@@ -227,8 +195,15 @@ app_ui = ui.page_fluid(
                               }
                           """),
             ui.card(
+                ui.HTML("""
+                        <div style="padding: 0px; text-align: left;">
+                            <h1 style="margin: 0; color: #343a40;"><b><img src="https://static.dwcdn.net/custom/themes/unctad-2024-rebrand/Blue%20arrow.svg" alt="Image" style="width: 30px; height: 30px; vertical-align: middle; margin-right: 10px;">The glaring inequality of income and CO<sub>2</sub> emissions</b></h1>
+                        </div>
+                        """),
+                        #<h4 style="margin: 0; color: #6c757d;">Subtitle goes here</h4>
                 #output_widget("plot")
-                ui.output_ui("plot", fill=True)
+                ui.output_ui("plot", fill=True),
+                style="background-color: #F4F9FD; padding: 0px;"  # Set the background color and padding for the card
                 ),
             )
     )
@@ -243,10 +218,12 @@ def server(input, output, session):
             ui.update_selectize("geography_list", choices=region1s+countries2, selected=countries2, label="Show country:")
             ui.update_numeric("bubble_similarity", value =1000000)
             ui.update_checkbox('leave_trace', value=False)
+            ui.update_checkbox('show_flags', value=False)
         else:
             ui.update_selectize("geography_list", choices=region1s, selected=region1s, label="Show region:")
             ui.update_numeric("bubble_similarity", value =1000000)
             ui.update_checkbox('leave_trace', value=True)
+            ui.update_checkbox('show_flags', value=True)
        
     @reactive.Effect
     @reactive.event(input.select_all_countries)
@@ -302,7 +279,7 @@ def server(input, output, session):
             )
             # Generate the HTML string
             animation_opts = {'frame': {'duration': 400/input.smoothness(), 'redraw': True},'transition': {'duration': 0/input.smoothness()}}
-            html_content = plot.to_html(full_html=True, auto_play=True, default_width='90vw', default_height='90vh', div_id='id_plot-container', animation_opts=animation_opts)
+            html_content = plot.to_html(full_html=False, auto_play=True, default_width='88vw', default_height='85vh', div_id='id_plot-container', animation_opts=animation_opts)
             
             #print(type(html_content))
             # Replace "Times New Roman" with "Helvetica Neue LT Std 45 Light"
