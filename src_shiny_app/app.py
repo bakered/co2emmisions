@@ -169,9 +169,9 @@ app_ui = ui.page_fluid(
                 ui.input_action_button(id="select_all_countries", label="Select all countries"),
                 ui.input_action_button(id="select_g20", label="Select G20"),
                 ui.input_selectize(id="geography_list", label="Show country:", 
-                                   choices= region1s, #region1s+countries2, #
+                                   choices=region1s, # region1s+countries2, #
                                    multiple=True, 
-                                   selected= region1s #  countries2 # 
+                                   selected=region1s #countries2 #
                                    ),
                 
                 ui.input_numeric(id="bubble_similarity", label="Bubble similar size (increase to make bubbles more similar): ", min=0, value=1000000),
@@ -280,7 +280,7 @@ def server(input, output, session):
     def _():
         if input.geographyLevel() == "countries":
             ui.update_selectize("geography_list", choices=region1s+countries2, selected=countries2, label="Show country:")
-            ui.update_numeric("bubble_similarity", value =1000000)
+            ui.update_numeric("bubble_similarity", value =200000)
             ui.update_checkbox('leave_trace', value=False)
             ui.update_checkbox('show_flags', value=False)
         else:
@@ -294,7 +294,7 @@ def server(input, output, session):
     def select_all_countries():
         ui.update_select("geographyLevel", selected="countries")
         ui.update_selectize("geography_list", choices=region1s+countries2, selected=countries2, label="Show country:")
-        ui.update_numeric("bubble_similarity", value =1000000)
+        ui.update_numeric("bubble_similarity", value =200000)
         ui.update_checkbox('leave_trace', value=False)
 
     # Handle "Select G20" button click
@@ -303,7 +303,7 @@ def server(input, output, session):
     def select_g20_countries():
         ui.update_select("geographyLevel", selected="countries")
         ui.update_selectize("geography_list", choices=region1s+countries2, selected=g20_countries, label="Show country:")
-        ui.update_numeric("bubble_similarity", value =1000000)
+        ui.update_numeric("bubble_similarity", value =200000)
         ui.update_checkbox('leave_trace', value=False)
         
         

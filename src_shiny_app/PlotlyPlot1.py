@@ -68,11 +68,10 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         color_map = {'Developed': '#009EDB', 'Developing': '#ED1847', 'LDCs': '#FFC800'}
         colour_var = 'region2'
     else:
-        color_map = {'text': 'black',
-            'Developed': '#005392', 'Developing Asia and Oceania': '#a71f36', 'Latin America and the Caribbean': '#006747', 'Africa': '#b16d03', 
+        color_map = {'Developed': '#005392', 'Developing Asia and Oceania': '#a71f36', 'Latin America and the Caribbean': '#006747', 'Africa': '#b16d03', 
                      'Developing Asia <br>and Oceania': '#a71f36', 'Latin America <br>and the Caribbean': '#006747',
-                     'DevelopedB': '#005392', 'Developing Asia and OceaniaB': '#a71f36', 'Latin America and the CaribbeanB': '#006747', 'AfricaB': '#b16d03',
-                     'Developing Asia <br>and OceaniaB': '#a71f36', 'Latin America <br>and the CaribbeanB': '#006747',}
+                     'Developedtext': '#005392', 'Developing Asia and Oceaniatext': '#a71f36', 'Latin America and the Caribbeantext': '#006747', 'Africatext': '#b16d03',
+                     'Developing Asia <br>and Oceaniatext': '#a71f36', 'Latin America <br>and the Caribbeantext': '#006747',}
         
         colour_var = 'region1'
     
@@ -328,6 +327,9 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     #this is used later in flag addition
     geographies = plot_df[geography].unique()
     
+    # num_bubbles used in text - plot_df_scatter
+    num_bubbles = len(plot_df[geography].unique())
+    
     ########## ADD SMOOTHING
     progress.set(5, "Adding smoothness...")
     def expand_dataframe(df, n, geography, year, x_var, y_var, bubble_size, normalised_size, additional_cols):
@@ -395,39 +397,33 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     if geographyLevel == "countries":
         # Create the base plot with Plotly Express
         
-        unique_geography_levels = plot_df[colour_var].unique()
-        print(unique_geography_levels)
-        if pd.api.types.is_categorical_dtype(plot_df[geography]):
-            print(plot_df[colour_var].cat.categories)
-
         print("try to make plot_df_scatter")
         # Create a copy of the original plot_df
         plot_df_scatter = plot_df.copy()
         
         # Step 1: Create a mask to find rows where geography is in text_positions
-        mask = plot_df[geography].isin(text_positions)
+        if num_bubbles <= 20:
+            mask = pd.Series([True] * len(plot_df_scatter))
+        else:
+            mask = plot_df_scatter[geography].isin(text_positions)
         
         # Step 2: Create a DataFrame of the filtered rows where geography is in text_positions
         replicated_df = plot_df.loc[mask].copy()
         
         # Step 3: Modify the replicated rows
-        replicated_df[colour_var] = 'text'  # Change colour_var to 'text'
-        replicated_df['bubble_size'] *= 1.5  # Halve the bubble size
+        replicated_df[colour_var] = replicated_df[colour_var] + 'text'  # Change colour_var to 'text'
+        replicated_df['bubble_size'] *= 0.2  # Halve the bubble size
         
         # Step 4: Concatenate the original DataFrame with the modified replicated DataFrame
         plot_df_scatter = pd.concat([plot_df_scatter, replicated_df], ignore_index=True)
 
-        desired_order = region1s
+        desired_order = region1s + [item + 'text' for item in region1s]
         desired_order = [category for category in desired_order if category in plot_df_scatter[colour_var].unique()]
-        print(desired_order)
-
+      
         print("made plot_df_scatter")
-        unique_geography_levels = plot_df_scatter[colour_var].unique()
-        print(unique_geography_levels)
-        if pd.api.types.is_categorical_dtype(plot_df_scatter[geography]):
-            print(plot_df_scatter[colour_var].cat.categories)
         
-        figScatterRAW = px.scatter(
+        
+        figScatter = px.scatter(
             plot_df_scatter, 
             x=x_var, 
             y=y_var, 
@@ -441,22 +437,6 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             template="plotly_white",
             #trendline="lowess"
         )
-        
-        if True:
-            figScatter = px.scatter(
-                plot_df_scatter, 
-                x=x_var, 
-                y=y_var, 
-                color=colour_var,
-                color_discrete_map=color_map,
-                size='bubble_size',
-                text=geography,
-                hover_name=geography,
-                animation_frame='year', 
-                size_max=scatter_size_max_parameter,
-                template="plotly_white",
-                #trendline="lowess"
-            )
         
         
 
@@ -488,12 +468,15 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
 
     # Extract traces and reorder them -  is this for legend only?
     ordered_traces = []
+    #print(figScatter.data)
+    #print(desired_order)
     for category in desired_order:
         # Filter traces for each category
         trace = next(tr for tr in figScatter.data if tr.name == category)
         ordered_traces.append(trace)        
     # Update the figure with reordered traces
     figScatter.data = ordered_traces
+    #print(figScatter.data)
     
     figScatter.update_layout(
         legend_title_font=dict(family = "Inter", size = 21, color = "black", weight="bold"),
@@ -673,7 +656,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     # hovertext
     # set settings xxx combine all frame by frames
     
-    num_bubbles = len(plot_df[geography].unique())
+    
     
 
     # Update inital data 
@@ -699,47 +682,39 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         # set initial data for bubble data
         else:
             if geographyLevel == "countries":
-                if trace.legendgroup != "text":
+                if 'text' not in trace.legendgroup:
                     trace.showlegend = True
                 else:
-                    trace.showlegend = True
+                    trace.showlegend = False
                     
             else:
                 trace.showlegend = False
             
-            #regading text names
+            #regading text
             if trace.text is not None and len(trace.text) > 0:
-                # if fewer than 20 bubbles, then plot all names
-                if num_bubbles <= 20:
-                    tracetextpositions = []
-                    tracetextfonts = []
-                    for listed_geog in trace.text:
-                        #for all listed geogs
-                        tracetextfonts = dict(family = "Inter", size = 21, weight="bold") #, color=color_map[trace.legendgroup])
-                        if listed_geog in text_positions:
-                            tracetextpositions.append(text_positions[listed_geog])
-                        else:
-                            tracetextpositions.append('top right')
-                    trace.textposition = tracetextpositions
-                    trace.textfont = tracetextfonts
-                    
-                # if more than 20 bubbles then keep only the named geographies
-                else:
-                    tracetext = []
-                    tracetextpositions = []
-                    for listed_geog in trace.text:
-                        #for all listed geogs
-                        tracetextfonts = dict(family = "Inter", size = 21, weight="bold") #, color=color_map[trace.legendgroup])
-                        if listed_geog in text_positions:
-                            tracetext.append(listed_geog)
-                            tracetextpositions.append(text_positions[listed_geog])
-                        else:
-                            tracetext.append('')
-                            tracetextpositions.append('top right')
-                    trace.text = tracetext
-                    trace.textposition = tracetextpositions
-                    trace.textfont = tracetextfonts
                 
+
+                tracetext = []
+                tracetextpositions = []
+                for listed_geog in trace.text:
+                    #for all listed geogs
+                    tracetextfonts = dict(family = "Inter", size = 21, weight="bold", color=color_map[trace.legendgroup])
+                    if ('text' in trace.name or geographyLevel == "regions"):
+                        tracetext.append(listed_geog)
+                        if listed_geog in text_positions:
+                            tracetextpositions.append(text_positions[listed_geog])
+                        else:
+                            tracetextpositions.append('top right')
+                        if 'text' in trace.name:
+                            trace.marker.opacity = 0
+                            print(trace)
+                    else:
+                        tracetext.append('')
+                        tracetextpositions.append('top right')
+                trace.text = tracetext
+                trace.textposition = tracetextpositions
+                trace.textfont = tracetextfonts
+                    
     
     # Update frame by frame
     for frame in fig.frames:
@@ -764,44 +739,37 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             # set frame data for bubble traces
             else:
                 if geographyLevel == "countries":
-                    if trace.legendgroup != "text":
+                    if 'text' not in trace.legendgroup:
                         trace.showlegend = True
                     else:
-                        trace.showlegend = True
+                        trace.showlegend = False
                 else:
                     trace.showlegend = False
                     
                 #regarding text
                 if trace.text is not None and len(trace.text) > 0:
-                    # if fewer than 20 bubbles, then plot all names
-                    if num_bubbles <= 20:
-                        tracetextpositions = []
-                        for listed_geog in trace.text:
-                            #for all listed geogs
-                            tracetextfonts = dict(family = "Inter", size = 21, weight="bold")#, color=color_map[trace.legendgroup])
-                            if listed_geog in text_positions:
-                                tracetextpositions.append(text_positions[listed_geog])
-                            else:
-                                tracetextpositions.append('top right')
-                        trace.textposition = tracetextpositions
-                        trace.textfont = tracetextfonts
                     
-                    # if more than 20 bubbles keep only names geographies
-                    else:
-                        tracetext = []
-                        tracetextpositions = []
-                        for listed_geog in trace.text:
-                            #for all listed geogs
-                            tracetextfonts = dict(family = "Inter", size = 21, weight="bold")#, color=color_map[trace.legendgroup])
+                    tracetext = []
+                    tracetextpositions = []
+                    for listed_geog in trace.text:
+                        #for all listed geogs
+                        tracetextfonts = dict(family = "Inter", size = 21, weight="bold", color=color_map[trace.legendgroup])
+                        if ('text' in trace.name or geographyLevel == "regions"):
+                            tracetext.append(listed_geog)
                             if listed_geog in text_positions:
-                                tracetext.append(listed_geog)
                                 tracetextpositions.append(text_positions[listed_geog])
                             else:
-                                tracetext.append('')
                                 tracetextpositions.append('top right')
-                        trace.text = tracetext
-                        trace.textposition = tracetextpositions
-                        trace.textfont = tracetextfonts
+                            if 'text' in trace.name:
+                                trace.marker.opacity = 0
+                        else:
+                            tracetext.append('')
+                            tracetextpositions.append('middle center')
+                    trace.text = tracetext
+                    trace.textposition = tracetextpositions
+                    trace.textfont = tracetextfonts
+                    
+                    
 
         
         #set annotations in frame, year and axes labels
