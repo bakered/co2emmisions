@@ -68,8 +68,12 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         color_map = {'Developed': '#009EDB', 'Developing': '#ED1847', 'LDCs': '#FFC800'}
         colour_var = 'region2'
     else:
-        color_map = {'Developed': '#009EDB', 'Developing Asia and Oceania': '#ED1847', 'Latin America and the Caribbean': '#72BF44', 'Africa': '#FFC800', 
-                     'Developing Asia <br>and Oceania': '#ED1847', 'Latin America <br>and the Caribbean': '#72BF44',}
+        color_map = {'text': 'black',
+            'Developed': '#005392', 'Developing Asia and Oceania': '#a71f36', 'Latin America and the Caribbean': '#006747', 'Africa': '#b16d03', 
+                     'Developing Asia <br>and Oceania': '#a71f36', 'Latin America <br>and the Caribbean': '#006747',
+                     'DevelopedB': '#005392', 'Developing Asia and OceaniaB': '#a71f36', 'Latin America and the CaribbeanB': '#006747', 'AfricaB': '#b16d03',
+                     'Developing Asia <br>and OceaniaB': '#a71f36', 'Latin America <br>and the CaribbeanB': '#006747',}
+        
         colour_var = 'region1'
     
     if datasource == "GCP and Maddison":
@@ -135,18 +139,9 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         if start_year<1990:
             start_year = 1990
     
-    #set some labels
-    if x_log: 
-        x_log_label = " in logs"
-    else:
-        x_log_label = ""
-    if y_log: 
-        y_log_label = " in logs"
-    else:
-        y_log_label = ""
-    x_var_label = "<b>" + labels.get(x_var, x_var) + x_log_label + labels_parenthesis.get(x_var) + "</b>" # 
-    y_var_label = "<b>" + labels.get(y_var, y_var) + y_log_label + labels_parenthesis.get(y_var) + "</b>" # 
     
+    x_var_label = labels.get(x_var, x_var) 
+    y_var_label = labels.get(y_var, y_var)
     
     
     ########## LOAD DATA
@@ -253,7 +248,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     
     ##### reorder to prevent frantic swapping
     ## make changes to either scatter plot            
-    desired_order = region1s 
+    desired_order = region1s
     desired_order = [category for category in desired_order if category in plot_df[colour_var].unique()]
      
     # create ordering so NaNs come last
@@ -304,19 +299,22 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     plot_df['bubble_size'] = np.where(plot_df[size_var] > 0, plot_df[size_var] + bubble_similarity, plot_df[size_var])
 
     plot_df['bubble_size'] = plot_df['bubble_size'].fillna(0)
-    scatter_size_max_parameter = 60 * bubble_size
+    if geographyLevel == "countries":
+        scatter_size_max_parameter = 60 * bubble_size
+    else:
+        scatter_size_max_parameter = 60 * bubble_size * 1.25
 
     # set parameter for flags
     if max_x>max_y:
         if geographyLevel == "countries":
             max_bubble_size_wanted = (max_x/24)*flag_size
         else:
-            max_bubble_size_wanted = (max_x/40)*flag_size
+            max_bubble_size_wanted = (max_x/40)*flag_size*4.5
     else:
         if geographyLevel == "countries":
             max_bubble_size_wanted = (max_y/12)*flag_size
         else:
-            max_bubble_size_wanted = (max_y/20)*flag_size
+            max_bubble_size_wanted = (max_y/20)*flag_size*4.5
     
     
     # Add normalised_size column such that the value is the diameter making 
@@ -396,13 +394,46 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     ########## CREATE SCATTER PLOT
     if geographyLevel == "countries":
         # Create the base plot with Plotly Express
-        figScatter = px.scatter(
-            plot_df, 
+        
+        unique_geography_levels = plot_df[colour_var].unique()
+        print(unique_geography_levels)
+        if pd.api.types.is_categorical_dtype(plot_df[geography]):
+            print(plot_df[colour_var].cat.categories)
+
+        print("try to make plot_df_scatter")
+        # Create a copy of the original plot_df
+        plot_df_scatter = plot_df.copy()
+        
+        # Step 1: Create a mask to find rows where geography is in text_positions
+        mask = plot_df[geography].isin(text_positions)
+        
+        # Step 2: Create a DataFrame of the filtered rows where geography is in text_positions
+        replicated_df = plot_df.loc[mask].copy()
+        
+        # Step 3: Modify the replicated rows
+        replicated_df[colour_var] = 'text'  # Change colour_var to 'text'
+        replicated_df['bubble_size'] *= 1.5  # Halve the bubble size
+        
+        # Step 4: Concatenate the original DataFrame with the modified replicated DataFrame
+        plot_df_scatter = pd.concat([plot_df_scatter, replicated_df], ignore_index=True)
+
+        desired_order = region1s
+        desired_order = [category for category in desired_order if category in plot_df_scatter[colour_var].unique()]
+        print(desired_order)
+
+        print("made plot_df_scatter")
+        unique_geography_levels = plot_df_scatter[colour_var].unique()
+        print(unique_geography_levels)
+        if pd.api.types.is_categorical_dtype(plot_df_scatter[geography]):
+            print(plot_df_scatter[colour_var].cat.categories)
+        
+        figScatterRAW = px.scatter(
+            plot_df_scatter, 
             x=x_var, 
             y=y_var, 
             color=colour_var,
             color_discrete_map=color_map,
-            size='bubble_size', 
+            size='bubble_size',
             text=geography,
             hover_name=geography,
             animation_frame='year', 
@@ -411,11 +442,26 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             #trendline="lowess"
         )
         
-        if not x_log and not y_log:
-            figScatter.update_traces(marker=dict(opacity=1))  # Set opacity to 0 for invisibility
-        else:
-            figScatter.update_traces(marker=dict(opacity=1))
-            
+        if True:
+            figScatter = px.scatter(
+                plot_df_scatter, 
+                x=x_var, 
+                y=y_var, 
+                color=colour_var,
+                color_discrete_map=color_map,
+                size='bubble_size',
+                text=geography,
+                hover_name=geography,
+                animation_frame='year', 
+                size_max=scatter_size_max_parameter,
+                template="plotly_white",
+                #trendline="lowess"
+            )
+        
+        
+
+        figScatter.update_traces(marker=dict(opacity=1))  # Set opacity to 0 for invisibility
+
         
 
     else:
@@ -435,16 +481,12 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         )
         
         figScatter.update_traces(textposition='top right')
-        figScatter.update_traces(marker=dict(opacity=1))
+        figScatter.update_traces(marker=dict(opacity=0))
         
         
         
-        
-     #   print(figScatter.data)
-      
-    
-    
-    # Extract traces and reorder them
+
+    # Extract traces and reorder them -  is this for legend only?
     ordered_traces = []
     for category in desired_order:
         # Filter traces for each category
@@ -452,8 +494,9 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         ordered_traces.append(trace)        
     # Update the figure with reordered traces
     figScatter.data = ordered_traces
+    
     figScatter.update_layout(
-        legend_title_font=dict(size=16, family="Inter"),
+        legend_title_font=dict(family = "Inter", size = 21, color = "black", weight="bold"),
         legend=dict(
             title="",
             orientation="h",
@@ -468,24 +511,29 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             #xanchor='left', # Positioning relative to the x-coordinate (left)
             #yanchor='top',  # Positioning relative to the y-coordinate (top)
             #traceorder='normal',
-            font = dict(family = "Inter", size = 16, color = "black"),
+            font = dict(family = "Inter", size = 21, color = "black", weight="bold"),
         ),
         plot_bgcolor='#F4F9FD',  # Background color inside the axes
         paper_bgcolor='#F4F9FD',
         xaxis=dict(
             linecolor='black',  # Color of the x-axis line
             linewidth=2,        # Thickness of the x-axis line
+            gridwidth=2,
+            gridcolor='darkgrey', 
+            griddash='dot',
+            tickfont=dict(size=20, color='#6e6259', family = "Inter")
         ),
         yaxis=dict(
+            showline=False,
             linecolor='black',  # Color of the y-axis line
             linewidth=2,        # Thickness of the y-axis line
+            gridwidth=2, 
+            gridcolor='darkgrey', 
+            griddash='dot',
+            tickfont=dict(size=20, color='#6e6259', family = "Inter")
         )
     )
-
-
-    # Extract color mapping from figLine
-    #color_map = {trace.name: trace.marker.color for trace in figScatter.data if 'color' in trace.marker}
-    
+ 
     # add log axes if necessary
     if x_log:
         figScatter.update_xaxes(type="log")
@@ -513,9 +561,6 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     
     if leave_trace:
         # xxxxx add a line of best fit : smooth curve..or pre-calculate and save in data?
-
-       
-
 
         if use_loess:
             def loess_smoothing(x, y, frac=0.3):
@@ -621,7 +666,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     
     
     ########## CHANGE CUSTOM SETTINGS
-    progress.set(90, "custom settings...")
+    progress.set(50, "custom settings...")
     #first set fig traces then go frame by frame and 
     # add flags or,
     # add labels
@@ -654,39 +699,46 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         # set initial data for bubble data
         else:
             if geographyLevel == "countries":
-                trace.showlegend = True
+                if trace.legendgroup != "text":
+                    trace.showlegend = True
+                else:
+                    trace.showlegend = True
+                    
             else:
                 trace.showlegend = False
-            # if fewer than 20 bubbles, then plot all names
-            if num_bubbles <= 20:
-                tracetextpositions = []
-                tracetextfonts = []
-                for listed_geog in trace.text:
-                    #for all listed geogs
-                    tracetextfonts = dict(color=color_map[trace.legendgroup])
-                    if listed_geog in text_positions:
-                        tracetextpositions.append(text_positions[listed_geog])
-                    else:
-                        tracetextpositions.append('top right')
-                trace.textposition = tracetextpositions
-                trace.textfont = tracetextfonts
-                
-            # if more than 20 bubbles then keep only the named geographies
-            else:
-                tracetext = []
-                tracetextpositions = []
-                for listed_geog in trace.text:
-                    #for all listed geogs
-                    tracetextfonts = dict(color=color_map[trace.legendgroup])
-                    if listed_geog in text_positions:
-                        tracetext.append(listed_geog)
-                        tracetextpositions.append(text_positions[listed_geog])
-                    else:
-                        tracetext.append('')
-                        tracetextpositions.append('top right')
-                trace.text = tracetext
-                trace.textposition = tracetextpositions
-                trace.textfont = tracetextfonts
+            
+            #regading text names
+            if trace.text is not None and len(trace.text) > 0:
+                # if fewer than 20 bubbles, then plot all names
+                if num_bubbles <= 20:
+                    tracetextpositions = []
+                    tracetextfonts = []
+                    for listed_geog in trace.text:
+                        #for all listed geogs
+                        tracetextfonts = dict(family = "Inter", size = 21, weight="bold") #, color=color_map[trace.legendgroup])
+                        if listed_geog in text_positions:
+                            tracetextpositions.append(text_positions[listed_geog])
+                        else:
+                            tracetextpositions.append('top right')
+                    trace.textposition = tracetextpositions
+                    trace.textfont = tracetextfonts
+                    
+                # if more than 20 bubbles then keep only the named geographies
+                else:
+                    tracetext = []
+                    tracetextpositions = []
+                    for listed_geog in trace.text:
+                        #for all listed geogs
+                        tracetextfonts = dict(family = "Inter", size = 21, weight="bold") #, color=color_map[trace.legendgroup])
+                        if listed_geog in text_positions:
+                            tracetext.append(listed_geog)
+                            tracetextpositions.append(text_positions[listed_geog])
+                        else:
+                            tracetext.append('')
+                            tracetextpositions.append('top right')
+                    trace.text = tracetext
+                    trace.textposition = tracetextpositions
+                    trace.textfont = tracetextfonts
                 
     
     # Update frame by frame
@@ -712,38 +764,44 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             # set frame data for bubble traces
             else:
                 if geographyLevel == "countries":
-                    trace.showlegend = True
+                    if trace.legendgroup != "text":
+                        trace.showlegend = True
+                    else:
+                        trace.showlegend = True
                 else:
                     trace.showlegend = False
-                # if fewer than 20 bubbles, then plot all names
-                if num_bubbles <= 20:
-                    tracetextpositions = []
-                    for listed_geog in trace.text:
-                        #for all listed geogs
-                        tracetextfonts = dict(color=color_map[trace.legendgroup])
-                        if listed_geog in text_positions:
-                            tracetextpositions.append(text_positions[listed_geog])
-                        else:
-                            tracetextpositions.append('top right')
-                    trace.textposition = tracetextpositions
-                    trace.textfont = tracetextfonts
-                
-                # if more than 20 bubbles keep only names geographies
-                else:
-                    tracetext = []
-                    tracetextpositions = []
-                    for listed_geog in trace.text:
-                        #for all listed geogs
-                        tracetextfonts = dict(color=color_map[trace.legendgroup])
-                        if listed_geog in text_positions:
-                            tracetext.append(listed_geog)
-                            tracetextpositions.append(text_positions[listed_geog])
-                        else:
-                            tracetext.append('')
-                            tracetextpositions.append('top right')
-                    trace.text = tracetext
-                    trace.textposition = tracetextpositions
-                    trace.textfont = tracetextfonts
+                    
+                #regarding text
+                if trace.text is not None and len(trace.text) > 0:
+                    # if fewer than 20 bubbles, then plot all names
+                    if num_bubbles <= 20:
+                        tracetextpositions = []
+                        for listed_geog in trace.text:
+                            #for all listed geogs
+                            tracetextfonts = dict(family = "Inter", size = 21, weight="bold")#, color=color_map[trace.legendgroup])
+                            if listed_geog in text_positions:
+                                tracetextpositions.append(text_positions[listed_geog])
+                            else:
+                                tracetextpositions.append('top right')
+                        trace.textposition = tracetextpositions
+                        trace.textfont = tracetextfonts
+                    
+                    # if more than 20 bubbles keep only names geographies
+                    else:
+                        tracetext = []
+                        tracetextpositions = []
+                        for listed_geog in trace.text:
+                            #for all listed geogs
+                            tracetextfonts = dict(family = "Inter", size = 21, weight="bold")#, color=color_map[trace.legendgroup])
+                            if listed_geog in text_positions:
+                                tracetext.append(listed_geog)
+                                tracetextpositions.append(text_positions[listed_geog])
+                            else:
+                                tracetext.append('')
+                                tracetextpositions.append('top right')
+                        trace.text = tracetext
+                        trace.textposition = tracetextpositions
+                        trace.textfont = tracetextfonts
 
         
         #set annotations in frame, year and axes labels
@@ -753,10 +811,11 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             showarrow=False,  # No arrow pointing to a data point
             xref="x",  # X position relative 'paper' or 'x' for 'data'
             yref="y",  # Y position relative 'paper' or 'y' for 'data'
-            x= min_x + 0.15*(max_x-min_x), #   pow(10, max_x) * 0.5,  # X position (bottom right)
+            x= min_x + 0.1*(max_x-min_x), #   pow(10, max_x) * 0.5,  # X position (bottom right)
             y= min_y + 0.75*(max_y-min_y),  # Y position (bottom right)
-            font=dict(size=45, color="grey"),  # Font size and color
-            align="right"  # Align text to the right
+            font=dict(size=45, color="black", family="Inter", weight="bold"),  # Font size and color
+            xanchor="left",
+            align="left"  # Align text to the right
         )
         if 'annotations' in frame.layout:
             frame.layout.annotations += (new_annotation,)
@@ -770,8 +829,8 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             xref="x",  # X position relative 'paper' or 'x' for 'data'
             yref="y",  # Y position relative 'paper' or 'y' for 'data'
             x= min_x + 1*(max_x-min_x), #   pow(10, max_x) * 0.5,  # X position (bottom right)
-            y= min_y + 0.07*(max_y-min_y),  # Y position (bottom right)
-            font=dict(size=18, color="black"),  # Font size and color
+            y= min_y + 0.02*(max_y-min_y),  # Y position (bottom right)
+            font=dict(size=17, color="black", family="Inter", weight="bold"),  # Font size and color
             xanchor="right",
             align="right",
         )
@@ -785,9 +844,9 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             showarrow=False,  # No arrow pointing to a data point
             xref="x",  # X position relative 'paper' or 'x' for 'data'
             yref="y",  # Y position relative 'paper' or 'y' for 'data'
-            x= min_x + 0.02*(max_x-min_x), #   pow(10, max_x) * 0.5,  # X position (bottom right)
-            y= min_y + 0.95*(max_y-min_y),  # Y position (bottom right)
-            font=dict(size=18, color="black"),  # Font size and color
+            x= min_x + 0.01*(max_x-min_x), #   pow(10, max_x) * 0.5,  # X position (bottom right)
+            y= min_y + 0.93*(max_y-min_y),  # Y position (bottom right)
+            font=dict(size=17, color="black", weight="bold", family="Inter"),  # Font size and color
             xanchor="left",
             align="left",
         )
@@ -912,12 +971,12 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         'buttons': [
             {
                 'args': [None, {'frame': {'duration': 400/smoothness, 'redraw': True}, 'fromcurrent': True, 'mode': 'immediate', 'transition': {'duration': 0/smoothness}}],
-                'label': 'Play',
+               # 'label': 'Play',
                 'method': 'animate'
             },
             {
                 'args': [[None], {'frame': {'duration': 400/smoothness, 'redraw': True}, 'mode': 'immediate', 'transition': {'duration': 0/smoothness}}],
-                'label': 'Pause',
+               # 'label': 'Pause',
                 'method': 'animate'
             }
         ],
@@ -952,9 +1011,9 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         #height=700,
         updatemenus=buttons,
         #sliders=sliders,
-        title_font=dict(family="Inter", size=24, color="black"),
-        xaxis_title_font=dict(family="Inter", size=18, color="black"),
-        yaxis_title_font=dict(family="Inter", size=18, color="black"),
+        title_font=dict(family="Inter", size=24, color="black"), #now there is no title, moved to annotations
+        xaxis_title_font=dict(family="Inter", size=18, color="black"), #now there is none, moved to annotations
+        yaxis_title_font=dict(family="Inter", size=18, color="black"), #now there is none, moved to annotations
         font=dict(family="Inter", size=14, color="black"),
     )
     
@@ -1004,8 +1063,10 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     
     
     #print(figScatter.layout)
-    #print(fig.data)
+  #  print(fig.data)
     # print(fig.layout)
+    
+ #   print(fig.frames[1])
     
     return(fig)
     

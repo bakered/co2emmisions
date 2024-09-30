@@ -150,7 +150,7 @@ app_ui = ui.page_fluid(
                                 selected="GCP and Maddison"),
                 ui.input_select(id="geographyLevel", label="Geography:", 
                                 choices={"countries": "Countries", "regions": "Regions"},
-                                selected="countries"),
+                                selected= "regions"), #"countries"), #
                 
                 ui.input_select(id="x_var", label="X Variable:", 
                                 choices=labels,
@@ -169,9 +169,9 @@ app_ui = ui.page_fluid(
                 ui.input_action_button(id="select_all_countries", label="Select all countries"),
                 ui.input_action_button(id="select_g20", label="Select G20"),
                 ui.input_selectize(id="geography_list", label="Show country:", 
-                                   choices=region1s+countries2,
+                                   choices= region1s, #region1s+countries2, #
                                    multiple=True, 
-                                   selected=countries2
+                                   selected= region1s #  countries2 # 
                                    ),
                 
                 ui.input_numeric(id="bubble_similarity", label="Bubble similar size (increase to make bubbles more similar): ", min=0, value=1000000),
@@ -180,10 +180,10 @@ app_ui = ui.page_fluid(
                 ui.input_numeric(id="rolling_mean_years", label="Rolling mean for trace line", min=1, max=100, value=1),
                 
                 ui.input_checkbox(id="fixed_axes", label="Fixed Axes", value=True),
-                ui.input_checkbox(id="leave_trace", label="Leave Trace", value=False),
+                ui.input_checkbox(id="leave_trace", label="Leave Trace", value=True),
                 ui.input_checkbox(id="x_log", label="x axis log", value=True),
                 ui.input_checkbox(id="y_log", label="y axis log", value=False),
-                ui.input_checkbox(id="show_flags", label="Show Flags", value=False),
+                ui.input_checkbox(id="show_flags", label="Show Flags", value=True),
                 ui.input_checkbox(id="use_loess", label="Use loess for lines", value=True),
                 
                 
@@ -197,16 +197,80 @@ app_ui = ui.page_fluid(
             ui.card(
                 ui.HTML("""
                         <div style="padding: 0px; text-align: left;">
-                            <h1 style="margin: 0; color: #343a40;"><b><img src="https://static.dwcdn.net/custom/themes/unctad-2024-rebrand/Blue%20arrow.svg" alt="Image" style="width: 30px; height: 30px; vertical-align: middle; margin-right: 10px;">The glaring inequality of income and CO<sub>2</sub> emissions</b></h1>
+                            <h1 style="margin: 0; color: #343a40; font-family: Inter; font-size: 35px"><b><img src="https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/Arrow.png" alt="Image" style="width: 60px; height: 60px; vertical-align: middle; margin-right: 10px;">The glaring inequality of income and CO<sub>2</sub> emissions</b></h1>
                         </div>
                         """),
                         #<h4 style="margin: 0; color: #6c757d;">Subtitle goes here</h4>
                 #output_widget("plot")
                 ui.output_ui("plot", fill=True),
+                ui.output_text("notes", container=None),  # Placeholder for the notes
                 style="background-color: #F4F9FD; padding: 0px;"  # Set the background color and padding for the card
                 ),
             )
     )
+
+
+def generate_notes(x_var, y_var, datasource, y_log, x_log):
+    
+    if datasource == "GCP and Maddison":
+        labels = {"co2_per_capita": "CO<sub>2</sub> per capita in tons.",
+                 "gdp_per_capita": "Gross domestic product (GDP) per capita converted to constant 2011 international dollars using purchasing power parity rates.",
+                 "co2": "Yearly CO<sub>2</sub> in kilotons",
+                 "accumulated_co2": "Accumulated CO<sub>2</sub> in kilotons. Could be inconsistent, only starts counting from the beginning of the data source.", 
+                 "pop": "Population", 
+                 "gdp": "Gross domestic product (GDP) in millions.",
+                 }
+        labels_parenthesis = {"co2_per_capita": "<br>(Tons)",
+                 "gdp_per_capita": "<br>(2011 Dollars, PPP)",
+                 "co2": "(kilotons)",
+                 "accumulated_co2": "<br>(Kilotons) (could be inconsistent!)", 
+                 "pop": "", 
+                 "gdp": "<br>(Millions)",
+                 }
+    else:
+        
+        labels = {"co2_per_capita": "CO<sub>2</sub> per capita",
+                  "gdp_per_capita": "Gross domestic product (GDP) per capita converted to constant 2021 international dollars using purchasing power parity rates.",
+                  "co2": "Yearly CO<sub>2</sub> in kilotons.",
+                  "accumulated_co2": "Accumulated CO<sub>2</sub> in kilotons. Could be inconsistent, only starts counting from the beginning of the data source.", 
+                  "pop": "Population.", 
+                  "gdp": "Gross domestic product (GDP) in millions",
+                  }
+        labels_parenthesis = {"co2_per_capita": " (Tons)",
+                  "gdp_per_capita": " (2021 Dollars, PPP)",
+                  "co2": " (kilotons)",
+                  "accumulated_co2": " (kilotons) (could be inconsistent!)", 
+                  "pop": "", 
+                  "gdp": " (millions)",
+                  }
+         
+     
+         
+    #set some labels
+    if y_log and x_log:
+        log_label = "Both axes in logarithmic scale."
+    elif x_log:
+        log_label = "Horizontal axis in logarithmic scale."
+    elif y_log:
+        log_label = "Vertical axis in logarithmic scale."
+    else:
+        log_label = "" 
+         
+    x_var_label =  labels.get(x_var, x_var)
+    y_var_label =  labels.get(y_var, y_var)
+       
+    if datasource == "GCP and Maddison":
+         datasource_label = "Global Carbon Project and the Maddison Project Database"
+    else:
+         datasource_label = "World Development Indicators (WDI) from the World Bank"
+        
+    notes = f"""
+    Source: UN GCRG – technical team, based on {datasource_label}.<br>
+    Note: {x_var_label} {y_var_label} {log_label}
+    """
+    
+    return notes 
+
 
 def server(input, output, session):  
     
@@ -290,6 +354,18 @@ def server(input, output, session):
 
         return ui.HTML(html_content)
         #output.out_plot.set_render(ui.HTML(plot.to_html(full_html=True)))
+        
+    # Render the notes based on x_var and y_var inputs
+    @output
+    @render.text
+    @reactive.event(input.plot_button, ignore_none=False)  # React to button click
+    def notes():
+        x_var = input.x_var()  # Assuming you have an input for x_var
+        y_var = input.y_var()  # Assuming you have an input for y_var
+        datasource = input.datasource()
+        x_log = input.x_log()
+        y_log = input.y_log()
+        return generate_notes(x_var, y_var, datasource, x_log, y_log)
         
      
     
