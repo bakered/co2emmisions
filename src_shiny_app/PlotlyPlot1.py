@@ -110,18 +110,24 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     if geographyLevel == "countries":
         text_positions = {
             'USA': 'top right',
-            "ZAF": 'top right', 
+            "ZAF": 'top left', 
             "EGY": 'top right', 
             "DZA": 'top right', 
             "USA": 'top right', 
-            "RUS": 'top right', 
+            "RUS": 'top left', 
             "JPN": 'top right', 
             "CHN": 'top right', 
             "IND": 'top right', 
             "IRN": 'top right', 
-            "BRA": 'top right', 
-            "MEX": 'top right', 
-            "ARG": 'top right',
+            "BRA": 'bottom right', 
+            "MEX": 'middle left', 
+            "ARG": 'top left',
+            "CAN": 'middle left',
+            "AUS": 'top left',
+            "DEU": 'middle right',
+            "FRA": 'bottom right',
+            "GBR": 'bottom left',
+            "TUR": 'top center',
         }
     else:
         text_positions = {
@@ -174,6 +180,9 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         data['ISO2']= data['ISO2'].astype(str)
         data['image_link'] = data['ISO2'].apply(lambda iso: f"https://hatscripts.github.io/circle-flags/flags/{iso.lower()}.svg")
         geography = 'ISO3'
+        #geography = 'country'
+        unique_data = data[['ISO3', 'country']].drop_duplicates()
+        country_map = dict(zip(unique_data['ISO3'], unique_data['country']))
     else:
         geography = 'region1'
         region_to_image_link = {
@@ -700,14 +709,16 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
                     #for all listed geogs
                     tracetextfonts = dict(family = "Inter", size = 21, weight="bold", color=color_map[trace.legendgroup])
                     if ('text' in trace.name or geographyLevel == "regions"):
-                        tracetext.append(listed_geog)
+                        if geographyLevel == "regions":
+                            tracetext.append(listed_geog)
+                        else:
+                            tracetext.append(country_map[listed_geog])
                         if listed_geog in text_positions:
                             tracetextpositions.append(text_positions[listed_geog])
                         else:
                             tracetextpositions.append('top right')
                         if 'text' in trace.name:
                             trace.marker.opacity = 0
-                            print(trace)
                     else:
                         tracetext.append('')
                         tracetextpositions.append('top right')
@@ -755,7 +766,10 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
                         #for all listed geogs
                         tracetextfonts = dict(family = "Inter", size = 21, weight="bold", color=color_map[trace.legendgroup])
                         if ('text' in trace.name or geographyLevel == "regions"):
-                            tracetext.append(listed_geog)
+                            if geographyLevel == "regions":
+                                tracetext.append(listed_geog)
+                            else:
+                                tracetext.append(country_map[listed_geog])
                             if listed_geog in text_positions:
                                 tracetextpositions.append(text_positions[listed_geog])
                             else:
@@ -995,9 +1009,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
 
     
     ######### SAVE OR RETURN PLOT
-    now_time = time.time()
-    print(f"plot created time: {now_time - start_time} seconds")
-    
+  
     animation_opts = {'frame': {'duration': 400/smoothness, 'redraw': True},'transition': {'duration': 0/smoothness}}
     #fig.write_html('/Users/edbaker/UN_projects/c02emmisions/plotly_animation.html', full_html=True, auto_play=True, default_width='95vw', default_height='95vh', div_id='id_plot-container', animation_opts=animation_opts)
     
@@ -1026,8 +1038,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
   #      f.write(fixed)
 
     
-    now_time = time.time()
-    print(f"plot saved time: {now_time - start_time} seconds")
+
     
     
     #print(figScatter.layout)
@@ -1035,6 +1046,59 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     # print(fig.layout)
     
  #   print(fig.frames[1])
+
+    if False:
+     
+
+        import moviepy.editor as mpy
+        import io
+        from PIL import Image
+        
+        # Function to convert a Plotly figure to an image array
+        def plotly_fig2array(fig):
+            fig_bytes = fig.to_image(format="png")
+            buf = io.BytesIO(fig_bytes)
+            img = Image.open(buf)
+            return np.asarray(img)
+        
+        # Extract the unique animation frame values from your figure
+        animation_frames = fig.frames
+        #print(fig.layout.updatemenus[0].buttons[0].visible=False)
+        
+        # Define the duration of the animation (in seconds)
+        animation_duration = 10  # seconds for the entire animation
+        fps = 10  # Frames per second for the video
+        
+        # Function to update the figure for each frame and return an image array
+        def make_frame(t):
+            # Get the current frame based on time 't' (frames are sequentially spaced)
+            
+            current_frame = int(t * len(animation_frames)/animation_duration)  # Scales time 't' to the number of frames
+            if current_frame > len(animation_frames)-1:
+                current_frame = len(animation_frames)-1
+            frame_data = animation_frames[current_frame].data  # Get the current frame's data
+            frame_layout = animation_frames[current_frame].layout
+            
+            # Update the figure with the data of the current frame
+            fig.update(data=frame_data, layout=frame_layout)
+           # fig.update_layout(updatemenus=[], sliders=[])  # Remove buttons and sliders
+            fig.layout.sliders[0].visible=False
+            fig.layout.updatemenus[0].buttons[0].visible=False
+            
+            # Convert the updated figure to an array (image) and return it
+            return plotly_fig2array(fig)
+        
+        # Create a MoviePy video clip using the `make_frame` function
+        animation = mpy.VideoClip(make_frame, duration=animation_duration)
+        
+        
+        # Write the animation to a GIF
+        animation.write_gif("/Users/edbaker/UN_projects/c02emmisions/plotly_animation.gif", fps=fps)
+        
+        # write to video
+        animation.write_videofile("/Users/edbaker/UN_projects/c02emmisions/plotly_animation.mp4", fps=fps, codec="libx264")
+
+
     
     return(fig)
     
