@@ -11,6 +11,7 @@ import time
 import math
 import statsmodels.api as sm
 
+
 def weighted_percentile(values, weights, percentile): #values = plot_df[y_var][index_max_y]; weights=plot_df['pop'][index_max_y]; percentile=95
     """Compute the weighted percentile of a given list of values."""
     # Convert values and weights to numpy arrays
@@ -68,10 +69,18 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         color_map = {'Developed': '#009EDB', 'Developing': '#ED1847', 'LDCs': '#FFC800'}
         colour_var = 'region2'
     else:
-        color_map = {'Developed': '#005392', 'Developing Asia and Oceania': '#a71f36', 'Latin America and the Caribbean': '#006747', 'Africa': '#b16d03', 
-                     'Developing Asia <br>and Oceania': '#a71f36', 'Latin America <br>and the Caribbean': '#006747',
-                     'Developedtext': '#005392', 'Developing Asia and Oceaniatext': '#a71f36', 'Latin America and the Caribbeantext': '#006747', 'Africatext': '#b16d03',
-                     'Developing Asia <br>and Oceaniatext': '#a71f36', 'Latin America <br>and the Caribbeantext': '#006747',}
+        color_map = {'Developed': '#019EDB', 'Developing Asia and Oceania': '#ED1846', 'Latin America and the Caribbean': '#72BF44', 'Africa': '#FFC803', 
+                     'Developing Asia <br>and Oceania': '#ED1846', 'Latin America <br>and the Caribbean': '#72BF44',
+                     'Developedtext': '#019EDB', 'Developing Asia and Oceaniatext': '#ED1846', 'Latin America and the Caribbeantext': '#72BF44', 'Africatext': '#FFC803',
+                     'Developing Asia <br>and Oceaniatext': '#ED1846', 'Latin America <br>and the Caribbeantext': '#72BF44',}
+        
+        
+        # #B8505E  
+        # asia dull: #a71f36 
+        # Developed dull': '#005392'
+        # 'Latin America and the Caribbean dull': '#006747'
+        # 'Africa dull': '#b16d03', 
+        
         
         colour_var = 'region1'
     
@@ -117,7 +126,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             "RUS": 'top left', 
             "JPN": 'top right', 
             "CHN": 'top right', 
-            "IND": 'top right', 
+            "IND": 'top left', 
             "IRN": 'top right', 
             "BRA": 'bottom right', 
             "MEX": 'middle left', 
@@ -132,10 +141,10 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     else:
         text_positions = {
             'Africa': 'middle right',
-            'Developing Asia and Oceania': 'top center',
-            'Latin America and the Caribbean': 'bottom right',
-            'Developed': 'bottom center'
-        }
+            'Developing Asia and Oceania': 'middle right',
+            'Latin America and the Caribbean': 'middle right',
+            'Developed': 'bottom center' #'top right' #
+        } 
         
     if datasource == "GCP and Maddison":
         if start_year<1820:
@@ -190,6 +199,12 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             "Developed": "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/developed_map.png",
             "Developing Asia and Oceania": "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/asia_and_oceania_map.png",
             "Latin America and the Caribbean": "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/latin_america_and_the_caribbean_map.png"
+        }
+        region_map = {
+            'Africa': 'Africa',
+            'Developing Asia and Oceania': 'Developing Asia<br>and Oceania',
+            'Latin America and the Caribbean': 'Latin America and<br>the Caribbean',
+            'Developed': 'Developed' #'bottom center'
         }
 
         # Use map() to create the new column 'image_link'
@@ -283,26 +298,62 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     # Calculate weighted 95% percentile
     index_max_x = plot_df.groupby(geography)[x_var].idxmax().dropna()
     index_max_y = plot_df.groupby(geography)[y_var].idxmax().dropna()
-    max_x = weighted_percentile(plot_df[x_var][index_max_x], plot_df['pop'][index_max_x], 95) *2.5 # plot_df[x_var].max() * 1.2
-    max_y = weighted_percentile(plot_df[y_var][index_max_y], plot_df['pop'][index_max_y], 95) *1.2 # plot_df[y_var].max() * 1.2
-    min_x = plot_df[x_var].min() * 0.9
-    min_y = plot_df[y_var].min() * 0.9
+    max_x = weighted_percentile(plot_df[x_var][index_max_x], plot_df['pop'][index_max_x], 95) # plot_df[x_var].max() * 1.2
+    max_y = weighted_percentile(plot_df[y_var][index_max_y], plot_df['pop'][index_max_y], 95) # plot_df[y_var].max() * 1.2
     
-
+    print(max_x)
+    
+    
+    def find_dtick(max_y): #max_y=50
+        lower_bound = max_y/10
+        upper_bound = max_y/4
+        power = np.floor(math.log10(abs(lower_bound)))
+        dtick_floor = lower_bound / 10 ** power
+        dtick_floor = np.ceil(dtick_floor)
+        dtick_ceil = upper_bound / 10 ** power
+        dtick_ceil = np.floor(dtick_ceil)
+        candidates = list(range(int(dtick_floor), int(dtick_ceil) + 1))
+        priority = [5, 2, 1, 10, 4, 6, 8, 3, 7, 9]
+        # Iterate through the priority list
+        for number in priority:
+            if number in candidates:
+                dtick = number  # Return the first number found in candidates
+                break
+        dtick = dtick * 10 ** power
+        return dtick
+    
+    dtick_x = find_dtick(max_x)
+    dtick_y = find_dtick(max_y)
+    
     # Calculate the range for logarithmic scale
     if x_log:
-        max_x = np.log10(max_x) + np.log10(1.2)
+
+        dtick_x *= 2
+        max_x = ((max_x + dtick_x - 1) // dtick_x) * dtick_x 
+        max_x = np.log10(max_x) + np.log10(1.005)
+
+
+        min_x = plot_df[x_var].min() * 0.9 
         min_x = min_x if min_x > 0 else 0.1
         min_x = np.log10(min_x) - np.log10(1.2)
     else:
+        max_x = ((max_x + dtick_x - 1) // dtick_x) * dtick_x * 1.005
         min_x = 0
     if y_log:
         max_y = np.log10(max_y) + np.log10(1.2)
+        n = np.ceil(np.log10(max_y))
+        # Compute the closest power of 10
+       # max_y = 10 ** n
+        
+        min_y = plot_df[y_var].min() * 0.9
         min_y = min_y if min_y > 0 else 0.1
         min_y = np.log10(min_y) - np.log10(1.2)
     else:
+        max_y = ((max_y + dtick_y - 1) // dtick_y) * dtick_y * 1.005
         min_y = 0
         
+    
+    
     #deal with size of bubbles 
     plot_df['bubble_size'] = np.where(plot_df[size_var] > 0, plot_df[size_var] + bubble_similarity, plot_df[size_var])
 
@@ -504,6 +555,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             #yanchor='top',  # Positioning relative to the y-coordinate (top)
             #traceorder='normal',
             font = dict(family = "Inter", size = 21, color = "black", weight="bold"),
+            itemsizing='constant'
         ),
         plot_bgcolor='#F4F9FD',  # Background color inside the axes
         paper_bgcolor='#F4F9FD',
@@ -513,7 +565,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             gridwidth=2,
             gridcolor='darkgrey', 
             griddash='dot',
-            tickfont=dict(size=20, color='#6e6259', family = "Inter")
+            tickfont=dict(size=20, color='#6e6259', family = "Inter"),
         ),
         yaxis=dict(
             showline=False,
@@ -522,16 +574,20 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             gridwidth=2, 
             gridcolor='darkgrey', 
             griddash='dot',
-            tickfont=dict(size=20, color='#6e6259', family = "Inter")
+            tickfont=dict(size=20, color='#6e6259', family = "Inter"),
         )
     )
  
     # add log axes if necessary
     if x_log:
         figScatter.update_xaxes(type="log")
+    else:
+        figScatter.update_xaxes(dtick=dtick_x)
     
     if y_log:
         figScatter.update_yaxes(type='log')
+    else:
+        figScatter.update_yaxes(dtick=dtick_y)
         
     # following code does not work: it changes the hovertext on the first frame only, and in that case wrong... need to deal with frames!.
     #.. better to go trace by trace?
@@ -710,7 +766,8 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
                     tracetextfonts = dict(family = "Inter", size = 21, weight="bold", color=color_map[trace.legendgroup])
                     if ('text' in trace.name or geographyLevel == "regions"):
                         if geographyLevel == "regions":
-                            tracetext.append(listed_geog)
+                            tracetext.append(region_map[listed_geog])
+                            
                         else:
                             tracetext.append(country_map[listed_geog])
                         if listed_geog in text_positions:
@@ -767,7 +824,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
                         tracetextfonts = dict(family = "Inter", size = 21, weight="bold", color=color_map[trace.legendgroup])
                         if ('text' in trace.name or geographyLevel == "regions"):
                             if geographyLevel == "regions":
-                                tracetext.append(listed_geog)
+                                tracetext.append(region_map[listed_geog])
                             else:
                                 tracetext.append(country_map[listed_geog])
                             if listed_geog in text_positions:
@@ -810,7 +867,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             showarrow=False,  # No arrow pointing to a data point
             xref="x",  # X position relative 'paper' or 'x' for 'data'
             yref="y",  # Y position relative 'paper' or 'y' for 'data'
-            x= min_x + 1*(max_x-min_x), #   pow(10, max_x) * 0.5,  # X position (bottom right)
+            x= min_x + 0.99*(max_x-min_x), #   pow(10, max_x) * 0.5,  # X position (bottom right)
             y= min_y + 0.02*(max_y-min_y),  # Y position (bottom right)
             font=dict(size=17, color="black", family="Inter", weight="bold"),  # Font size and color
             xanchor="right",
@@ -826,8 +883,8 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             showarrow=False,  # No arrow pointing to a data point
             xref="x",  # X position relative 'paper' or 'x' for 'data'
             yref="y",  # Y position relative 'paper' or 'y' for 'data'
-            x= min_x + 0.01*(max_x-min_x), #   pow(10, max_x) * 0.5,  # X position (bottom right)
-            y= min_y + 0.93*(max_y-min_y),  # Y position (bottom right)
+            x= min_x + 0.01 *(max_x-min_x), #   pow(10, max_x) * 0.5,  # X position (bottom right)
+            y= min_y + 0.97 *(max_y-min_y),  # Y position (bottom right)
             font=dict(size=17, color="black", weight="bold", family="Inter"),  # Font size and color
             xanchor="left",
             align="left",
