@@ -1,0 +1,1 @@
+web: gunicorn src_shiny_app.app:flask_app --log-file -
