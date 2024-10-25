@@ -54,6 +54,8 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
                              use_loess=True,
                              start_time=time.time(),
                              progress=None,
+                             download="nothing",
+                             filename="test",
                              ):
     
     #geographyLevel='countries'; x_var='gdp_per_capita'; y_var='co2_per_capita'; size_var='co2'; race_var='accumulated_co2'; leave_trace=True; fixed_axes=True; flag_size=1; x_log=False; y_log=False; show_flags=False; start_year=1950
@@ -69,10 +71,10 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         color_map = {'Developed': '#009EDB', 'Developing': '#ED1847', 'LDCs': '#FFC800'}
         colour_var = 'region2'
     else:
-        color_map = {'Developed': '#019EDB', 'Developing Asia and Oceania': '#ED1846', 'Latin America and the Caribbean': '#72BF44', 'Africa': '#FFC803', 
-                     'Developing Asia <br>and Oceania': '#ED1846', 'Latin America <br>and the Caribbean': '#72BF44',
-                     'Developedtext': '#019EDB', 'Developing Asia and Oceaniatext': '#ED1846', 'Latin America and the Caribbeantext': '#72BF44', 'Africatext': '#FFC803',
-                     'Developing Asia <br>and Oceaniatext': '#ED1846', 'Latin America <br>and the Caribbeantext': '#72BF44',}
+        color_map = {'Developed': '#009EDB', 'Developing Asia and Oceania': '#ED1847', 'Latin America and the Caribbean': '#72BF44', 'Africa': '#FBAF17', 
+                     'Developing Asia <br>and Oceania': '#ED1847', 'Latin America <br>and the Caribbean': '#72BF44',
+                     'Developedtext': '#009EDB', 'Developing Asia and Oceaniatext': '#ED1847', 'Latin America and the Caribbeantext': '#72BF44', 'Africatext': '#FBAF17',
+                     'Developing Asia <br>and Oceaniatext': '#ED1847', 'Latin America <br>and the Caribbeantext': '#72BF44',}
         
         
         # #B8505E  
@@ -141,8 +143,10 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     else:
         text_positions = {
             'Africa': 'middle right',
-            'Developing Asia and Oceania': 'middle right',
+            'Developing Asia and Oceania': 'top center',
+            'Developing Asia<br>and Oceania': 'top center',
             'Latin America and the Caribbean': 'middle right',
+            'Latin America and<br>the Caribbean': 'middle right',
             'Developed': 'bottom center' #'top right' #
         } 
         
@@ -168,14 +172,15 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     #data = pd.read_csv(open_url('https://github.com/bakered/co2emmisions/blob/main/src_shiny_app/dataPlot1.csv'))
     if datasource == "GCP and Maddison":
         if geographyLevel == "countries":
-            infile = Path(__file__).parent / "dataCountries.csv"
+            infile = Path(__file__).parent / "data" / "dataCountries.csv"
         else:
-            infile = Path(__file__).parent / "dataRegions.csv"
+            infile = Path(__file__).parent / "data" / "dataRegions.csv"
+            print(infile)
     else:
         if geographyLevel == "countries":
-            infile = Path(__file__).parent / "dataWDICountries.csv"
+            infile = Path(__file__).parent / "data" / "dataWDICountries.csv"
         else:
-            infile = Path(__file__).parent / "dataWDIRegions.csv"
+            infile = Path(__file__).parent / "data" / "dataWDIRegions.csv"
     data = pd.read_csv(infile)
     data['region1'] = pd.Categorical(data['region1'], categories=region1s, ordered=True)
     data['year'] = data['year'].astype(int)
@@ -200,6 +205,12 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             "Developing Asia and Oceania": "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/asia_and_oceania_map.png",
             "Latin America and the Caribbean": "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/latin_america_and_the_caribbean_map.png"
         }
+     #   region_to_image_link = {
+     #       "Africa": "/static/africa_map.png",
+     #       "Developed": "/static/developed_map.png",
+     #       "Developing Asia and Oceania": "/static/asia_and_oceania_map.png",
+     #       "Latin America and the Caribbean": "/static/latin_america_and_the_caribbean_map.png"
+     #   }
         region_map = {
             'Africa': 'Africa',
             'Developing Asia and Oceania': 'Developing Asia<br>and Oceania',
@@ -1103,10 +1114,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     # print(fig.layout)
     
  #   print(fig.frames[1])
-
-    if False:
-     
-
+    if download != "nothing":
         import moviepy.editor as mpy
         import io
         from PIL import Image
@@ -1141,6 +1149,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
            # fig.update_layout(updatemenus=[], sliders=[])  # Remove buttons and sliders
             fig.layout.sliders[0].visible=False
             fig.layout.updatemenus[0].buttons[0].visible=False
+            fig.layout.updatemenus[0].buttons[1].visible=False
             
             # Convert the updated figure to an array (image) and return it
             return plotly_fig2array(fig)
@@ -1148,14 +1157,51 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         # Create a MoviePy video clip using the `make_frame` function
         animation = mpy.VideoClip(make_frame, duration=animation_duration)
         
+        print(type(animation))
+
+
+    if download=="mp4":
+        import cv2
+
+        # Get the dimensions of the frame
+        frame_shape = animation.get_frame(0).shape
+        height, width, _ = frame_shape
+        
+        # Define the video writer
+        out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), 24, (width, height))
+        
+        # Write each frame to the video file
+        for i in range(int(animation.duration * fps)):  # Assuming 24 FPS
+            frame = animation.get_frame(i / fps)  # Get frame at the given time
+            out.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))  # Convert from RGB to BGR (for OpenCV)
+        
+        # Release the video writer
+        out.release()
+        
+    if download=="gif":
         
         # Write the animation to a GIF
-        animation.write_gif("/Users/edbaker/UN_projects/c02emmisions/plotly_animation.gif", fps=fps)
+        animation.write_gif(filename, fps=fps)
         
         # write to video
-        animation.write_videofile("/Users/edbaker/UN_projects/c02emmisions/plotly_animation.mp4", fps=fps, codec="libx264")
+        animation.write_videofile("/Users/edbaker/UN_projects/c02emmisions/plotly_animation2.mp4", fps=fps, codec="mpeg4", temp_audiofile="temp_audiofilexxxx")
+        animation.write_videofile("/Users/edbaker/UN_projects/c02emmisions/plotly_animation3.webm",audio=False, fps=fps)
 
-
+        # Directory to save individual frames
+        import os 
+        
+        output_dir = "frames"
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Save each frame as an image
+        for i in range(int(animation.duration * fps)):  # Assuming 24 FPS
+            frame = animation.get_frame(i / fps)  # Get frame at the given time
+            frame_img = Image.fromarray(frame)
+            frame_img.save(f"{output_dir}/frame_{i:04d}.png")
+            
+            
+            
+        
     
     return(fig)
     

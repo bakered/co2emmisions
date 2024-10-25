@@ -6,14 +6,17 @@ Created on Sun Sep  8 06:59:49 2024
 @author: edbaker
 """
 
+print("starting app")
 
 from shiny import ui, render, App, reactive
 from PlotlyPlot1 import createCountryBubbleGraph  # Import the function from the other file
 import time
 import asyncio
+from flask import Flask, send_file, send_from_directory
+import os
+from pathlib import Path
 
 start_time = time.time()
-
 
 #from shinywidgets import output_widget, render_widget  
 
@@ -99,8 +102,13 @@ font_css = """
 </style>
 """
 
+static_path = Path(__file__).parent / "static"
 
+# Function to create the image source
+def get_image_link(image_name):
+    return str(static_path / image_name)
 
+arrow_link = get_image_link('Arrow.png')
 
 app_ui = ui.page_fluid(
     ui.tags.link(
@@ -144,6 +152,7 @@ app_ui = ui.page_fluid(
             ui.sidebar(
                 # Add a button
                 ui.tags.p("Click Plot button for changes to take effect:"),
+                ui.download_button("download_mp4", "Download MP4"),
                 ui.input_action_button(id="plot_button", label="Plot", class_="custom-green-button"),
                 ui.input_select(id="datasource", label="Data source:", 
                                 choices={"GCP and Maddison":"GCP and Maddison", "World Bank WDI":"World Bank WDI"},
@@ -195,15 +204,16 @@ app_ui = ui.page_fluid(
                               }
                           """),
             ui.card(
-                ui.HTML("""
+                ui.HTML(f"""
                         <div style="padding: 0px; text-align: left;">
                             <h1 style="margin: 0; color: #343a40; font-family: Inter; font-size: 35px"><b><img src="https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/Arrow.png" alt="Image" style="width: 60px; height: 60px; vertical-align: middle; margin-right: 10px;">The glaring inequality of income and CO<sub>2</sub> emissions</b></h1>
                         </div>
                         """),
+                        ## "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/Arrow.png"
                         #<h4 style="margin: 0; color: #6c757d;">Subtitle goes here</h4>
                 #output_widget("plot")
                 ui.output_ui("plot", fill=True),
-                ui.output_text("notes", container=None),  # Placeholder for the notes
+                ui.output_ui("notes", container=None),  # Placeholder for the notes
                 style="background-color: #F4F9FD; padding: 0px;"  # Set the background color and padding for the card
                 ),
             )
@@ -264,9 +274,9 @@ def generate_notes(x_var, y_var, datasource, y_log, x_log):
     else:
          datasource_label = "World Development Indicators (WDI) from the World Bank"
         
-    notes = f"""
+    notes = f"""<p>
     Source: UN GCRG – technical team, based on {datasource_label}.<br>
-    Note: {x_var_label} {y_var_label} {log_label}
+    Note: {x_var_label} {y_var_label} {log_label}</p>
     """
     
     return notes 
@@ -357,7 +367,7 @@ def server(input, output, session):
         
     # Render the notes based on x_var and y_var inputs
     @output
-    @render.text
+    @render.ui
     @reactive.event(input.plot_button, ignore_none=False)  # React to button click
     def notes():
         x_var = input.x_var()  # Assuming you have an input for x_var
@@ -365,10 +375,59 @@ def server(input, output, session):
         datasource = input.datasource()
         x_log = input.x_log()
         y_log = input.y_log()
-        return generate_notes(x_var, y_var, datasource, x_log, y_log)
+        return ui.HTML(generate_notes(x_var, y_var, datasource, x_log, y_log))
         
      
     
-
+    # MP4 download handler
+    @session.download("download_mp4")
+    def download_mp4():
+        # Define the output file path for the MP4
+        mp4_filename = "Co2_emissions" + str(time.time()) + ".mp4"
+        
+        with ui.Progress(max=100) as progress:
+            plot = createCountryBubbleGraph(
+                datasource=input.datasource(),
+                geographyLevel=input.geographyLevel(),
+                x_var=input.x_var(),
+                y_var=input.y_var(),
+                size_var=input.size_var(),
+                smoothness=input.smoothness(),
+                rolling_mean_years=input.rolling_mean_years(),
+                start_year=input.start_year(),
+                geography_list=input.geography_list(),
+                bubble_similarity=input.bubble_similarity(),
+                bubble_size=input.bubble_size(),
+                flag_size=input.flag_size(),
+                fixed_axes=input.fixed_axes(),
+                leave_trace=input.leave_trace(),
+                x_log=input.x_log(),
+                y_log=input.y_log(),
+                show_flags=input.show_flags(),
+                use_loess=input.use_loess(),
+                start_time=start_time,
+                progress=progress,
+                download="mp4",
+                filename=mp4_filename,
+            )
+            
+        # Yield the file path for download
+        yield mp4_filename
+        
+        # Optionally, clean up by deleting the file after serving
+        os.remove(mp4_filename)
 
 app = App(ui=app_ui, server=server) 
+
+flask_app = Flask(__name__)
+# Integrate Shiny into Flask
+@flask_app.route("/")
+def index():
+    return app.run_asgi()  # Run as ASGI-compatible app
+
+@flask_app.route('/static/<path:filename>')
+def serve_static(filename):
+    return send_from_directory(os.path.join(app.root_path, 'static'), filename)
+
+if __name__ == "__main__":
+    flask_app.run(host="0.0.0.0", port=8000)
