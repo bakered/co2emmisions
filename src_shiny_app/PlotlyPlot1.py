@@ -200,10 +200,10 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     else:
         geography = 'region1'
         region_to_image_link = {
-            "Africa": "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/africa_map.png",
-            "Developed": "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/developed_map.png",
-            "Developing Asia and Oceania": "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/asia_and_oceania_map.png",
-            "Latin America and the Caribbean": "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/latin_america_and_the_caribbean_map.png"
+            "Africa": "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/static/africa_map.png",
+            "Developed": "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/static/developed_map.png",
+            "Developing Asia and Oceania": "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/static/asia_and_oceania_map.png",
+            "Latin America and the Caribbean": "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/static/latin_america_and_the_caribbean_map.png"
         }
      #   region_to_image_link = {
      #       "Africa": "/static/africa_map.png",

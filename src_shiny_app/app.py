@@ -9,10 +9,9 @@ Created on Sun Sep  8 06:59:49 2024
 print("starting app")
 
 from shiny import ui, render, App, reactive
-from PlotlyPlot1 import createCountryBubbleGraph  # Import the function from the other file
+from .PlotlyPlot1 import createCountryBubbleGraph  # Import the function from the other file
 import time
-import asyncio
-from flask import Flask, send_file, send_from_directory
+# import asyncio
 import os
 from pathlib import Path
 
@@ -206,7 +205,7 @@ app_ui = ui.page_fluid(
             ui.card(
                 ui.HTML(f"""
                         <div style="padding: 0px; text-align: left;">
-                            <h1 style="margin: 0; color: #343a40; font-family: Inter; font-size: 35px"><b><img src="https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/Arrow.png" alt="Image" style="width: 60px; height: 60px; vertical-align: middle; margin-right: 10px;">The glaring inequality of income and CO<sub>2</sub> emissions</b></h1>
+                            <h1 style="margin: 0; color: #343a40; font-family: Inter; font-size: 35px"><b><img src="https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/static/Arrow.png" alt="Image" style="width: 60px; height: 60px; vertical-align: middle; margin-right: 10px;">The glaring inequality of income and CO<sub>2</sub> emissions</b></h1>
                         </div>
                         """),
                         ## "https://raw.githubusercontent.com/bakered/co2emmisions/main/src_shiny_app/Arrow.png"
@@ -418,16 +417,3 @@ def server(input, output, session):
         os.remove(mp4_filename)
 
 app = App(ui=app_ui, server=server) 
-
-flask_app = Flask(__name__)
-# Integrate Shiny into Flask
-@flask_app.route("/")
-def index():
-    return app.run_asgi()  # Run as ASGI-compatible app
-
-@flask_app.route('/static/<path:filename>')
-def serve_static(filename):
-    return send_from_directory(os.path.join(app.root_path, 'static'), filename)
-
-if __name__ == "__main__":
-    flask_app.run(host="0.0.0.0", port=8000)
