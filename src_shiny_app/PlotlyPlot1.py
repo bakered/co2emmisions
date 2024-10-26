@@ -10,7 +10,10 @@ from pathlib import Path
 import time
 import math
 import statsmodels.api as sm
-
+import moviepy.editor as mpy
+import io
+from PIL import Image
+import cv2
 
 def weighted_percentile(values, weights, percentile): #values = plot_df[y_var][index_max_y]; weights=plot_df['pop'][index_max_y]; percentile=95
     """Compute the weighted percentile of a given list of values."""
@@ -1132,10 +1135,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     
  #   print(fig.frames[1])
     if download != "nothing":
-        import moviepy.editor as mpy
-        import io
-        from PIL import Image
-        
+   
         # Function to convert a Plotly figure to an image array
         def plotly_fig2array(fig):
             fig_bytes = fig.to_image(format="png")
@@ -1180,7 +1180,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     if download=="mp4":
         print("attempt mp4")
         
-        import cv2
+        
 
         # Get the dimensions of the frame
         frame_shape = animation.get_frame(0).shape

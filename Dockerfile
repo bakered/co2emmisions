@@ -8,8 +8,8 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install dependencies
+RUN apt-get update && apt-get install ffmpeg libsm6 libxext6  -y
 RUN pip install --no-cache-dir -r requirements.txt || { echo "pip install failed"; exit 1; }
-
 
 # Copy the rest of the application code into the container
 COPY . .
