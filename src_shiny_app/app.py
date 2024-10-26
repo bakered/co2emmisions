@@ -441,9 +441,8 @@ def server(input, output, session):
             
         # Yield the file path for download
         return mp4_filename
-        
-        # Optionally, clean up by deleting the file after serving
-        #os.remove(mp4_filename)
+        #clean up by deleting the file after serving
+        os.remove(mp4_filename)
         
     
     # MP4 download handler
@@ -486,8 +485,8 @@ def server(input, output, session):
         # Yield the file path for download
         return gif_filename
         
-        # Optionally, clean up by deleting the file after serving
-        #os.remove(gif_filename)
+        # clean up by deleting the file after serving
+        os.remove(gif_filename)
 
 
 app = App(ui=app_ui, server=server) 
