@@ -9,7 +9,7 @@ Created on Sun Sep  8 06:59:49 2024
 print("starting app")
 
 from shiny import ui, render, App, reactive
-from PlotlyPlot1 import createCountryBubbleGraph  # Import the function from the other file
+from .PlotlyPlot1 import createCountryBubbleGraph  # Import the function from the other file
 import time
 # import asyncio
 import os
