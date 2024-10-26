@@ -55,11 +55,17 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
                              start_time=time.time(),
                              progress=None,
                              download="nothing",
-                             filename="test",
+                             filename="plotly_animation_test5.mp4",
+                             width="default",
+                             height="default",
+                             fps=2,
+                             length=10,
                              ):
     
     #geographyLevel='countries'; x_var='gdp_per_capita'; y_var='co2_per_capita'; size_var='co2'; race_var='accumulated_co2'; leave_trace=True; fixed_axes=True; flag_size=1; x_log=False; y_log=False; show_flags=False; start_year=1950
     
+    total_frames = (2022 - start_year)*smoothness
+    frame_duration = 1000*length /  total_frames 
     
     ########## SET PARAMETERS
     region1s = ["Developed", 
@@ -339,9 +345,9 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     # Calculate the range for logarithmic scale
     if x_log:
 
-        dtick_x *= 2
+        dtick_x *= 4
         max_x = ((max_x + dtick_x - 1) // dtick_x) * dtick_x 
-        max_x = np.log10(max_x) + np.log10(1.005)
+        max_x = np.log10(max_x) + np.log10(1.02)
 
 
         min_x = plot_df[x_var].min() * 0.9 
@@ -351,7 +357,9 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         max_x = ((max_x + dtick_x - 1) // dtick_x) * dtick_x * 1.005
         min_x = 0
     if y_log:
-        max_y = np.log10(max_y) + np.log10(1.2)
+        dtick_y *= 4
+        max_y = ((max_y + dtick_y - 1) // dtick_y) * dtick_y 
+        max_y = np.log10(max_y) + np.log10(1.02)
         n = np.ceil(np.log10(max_y))
         # Compute the closest power of 10
        # max_y = 10 ** n
@@ -1020,12 +1028,12 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     buttons = [{
         'buttons': [
             {
-                'args': [None, {'frame': {'duration': 400/smoothness, 'redraw': True}, 'fromcurrent': True, 'mode': 'immediate', 'transition': {'duration': 0/smoothness}}],
+                'args': [None, {'frame': {'duration': frame_duration, 'redraw': True}, 'fromcurrent': True, 'mode': 'immediate', 'transition': {'duration': 0}}],
                # 'label': 'Play',
                 'method': 'animate'
             },
             {
-                'args': [[None], {'frame': {'duration': 400/smoothness, 'redraw': True}, 'mode': 'immediate', 'transition': {'duration': 0/smoothness}}],
+                'args': [[None], {'frame': {'duration': frame_duration, 'redraw': True}, 'mode': 'immediate', 'transition': {'duration': 0}}],
                # 'label': 'Pause',
                 'method': 'animate'
             }
@@ -1078,7 +1086,12 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     
     ######### SAVE OR RETURN PLOT
   
-    animation_opts = {'frame': {'duration': 400/smoothness, 'redraw': True},'transition': {'duration': 0/smoothness}}
+    num_frames = len(fig.frames)
+    print("Number of frames:", num_frames)
+    
+    # Generate the HTML string
+    animation_opts = {'frame': {'duration': frame_duration, 'redraw': True},'transition': {'duration': 0}}
+
     #fig.write_html('/Users/edbaker/UN_projects/c02emmisions/plotly_animation.html', full_html=True, auto_play=True, default_width='95vw', default_height='95vh', div_id='id_plot-container', animation_opts=animation_opts)
     
     # Path to your HTML file
@@ -1106,6 +1119,10 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
   #      f.write(fixed)
 
     
+    if width != "default":
+        print(int(width))
+        print(int(height))
+        fig.update_layout(width=int(width), height=int(height))
 
     
     
@@ -1131,8 +1148,8 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         #print(fig.layout.updatemenus[0].buttons[0].visible=False)
         
         # Define the duration of the animation (in seconds)
-        animation_duration = 10  # seconds for the entire animation
-        fps = 10  # Frames per second for the video
+        animation_duration = length  # seconds for the entire animation
+        #fps = 10  # Frames per second for the video
         
         # Function to update the figure for each frame and return an image array
         def make_frame(t):
@@ -1161,28 +1178,34 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
 
 
     if download=="mp4":
+        print("attempt mp4")
+        
         import cv2
 
         # Get the dimensions of the frame
         frame_shape = animation.get_frame(0).shape
-        height, width, _ = frame_shape
+        frame_height, frame_width, _ = frame_shape
+        print(frame_shape)
         
+        print("writing " + filename)
         # Define the video writer
-        out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), 24, (width, height))
+        out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), fps, (frame_width, frame_height))
         
         # Write each frame to the video file
-        for i in range(int(animation.duration * fps)):  # Assuming 24 FPS
-            frame = animation.get_frame(i / fps)  # Get frame at the given time
+        for i in range(int(animation.duration * fps)):  
+            print(i)
+            frame = animation.get_frame(i / fps)
             out.write(cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))  # Convert from RGB to BGR (for OpenCV)
         
         # Release the video writer
         out.release()
         
     if download=="gif":
-        
+        print("writing " + filename)
         # Write the animation to a GIF
         animation.write_gif(filename, fps=fps)
         
+    if False:
         # write to video
         animation.write_videofile("/Users/edbaker/UN_projects/c02emmisions/plotly_animation2.mp4", fps=fps, codec="mpeg4", temp_audiofile="temp_audiofilexxxx")
         animation.write_videofile("/Users/edbaker/UN_projects/c02emmisions/plotly_animation3.webm",audio=False, fps=fps)

@@ -9,7 +9,7 @@ Created on Sun Sep  8 06:59:49 2024
 print("starting app")
 
 from shiny import ui, render, App, reactive
-from .PlotlyPlot1 import createCountryBubbleGraph  # Import the function from the other file
+from PlotlyPlot1 import createCountryBubbleGraph  # Import the function from the other file
 import time
 # import asyncio
 import os
@@ -151,8 +151,9 @@ app_ui = ui.page_fluid(
             ui.sidebar(
                 # Add a button
                 ui.tags.p("Click Plot button for changes to take effect:"),
-                ui.download_button("download_mp4", "Download MP4"),
                 ui.input_action_button(id="plot_button", label="Plot", class_="custom-green-button"),
+                ui.download_button("download_mp4", "Download MP4"),
+                ui.download_button("download_gif", "Download GIF"),
                 ui.input_select(id="datasource", label="Data source:", 
                                 choices={"GCP and Maddison":"GCP and Maddison", "World Bank WDI":"World Bank WDI"},
                                 selected="GCP and Maddison"),
@@ -193,7 +194,10 @@ app_ui = ui.page_fluid(
                 ui.input_checkbox(id="y_log", label="y axis log", value=False),
                 ui.input_checkbox(id="show_flags", label="Show Flags", value=True),
                 ui.input_checkbox(id="use_loess", label="Use loess for lines", value=True),
-                
+                ui.input_text('width', 'Width:', value="default"),
+                ui.input_text('height', 'Height:', value="default"),
+                ui.input_numeric(id='fps', label='FPS', value=10),
+                ui.input_numeric(id='length', label='Seconds', value=10),
                 
                 bg="#f8f8f8", open="closed",
                 ),
@@ -349,10 +353,30 @@ def server(input, output, session):
                 use_loess=input.use_loess(),
                 start_time=start_time,
                 progress=progress,
+                width=input.width(),
+                height=input.height(),
+                fps=input.fps(),
+                length=input.length(),
             )
+            
+            
+            total_frames = (2022 - input.start_year())*input.smoothness()
+            frame_duration = 1000*input.length() /  total_frames 
+            print("frames")
+            print(total_frames)
+            print(input.length())
+            print(frame_duration)
+           
+            
             # Generate the HTML string
-            animation_opts = {'frame': {'duration': 400/input.smoothness(), 'redraw': True},'transition': {'duration': 0/input.smoothness()}}
-            html_content = plot.to_html(full_html=False, auto_play=True, default_width='88vw', default_height='85vh', div_id='id_plot-container', animation_opts=animation_opts)
+            animation_opts = {'frame': {'duration': frame_duration, 'redraw': True},'transition': {'duration': 0}}
+            
+            
+            print(input.width())
+            if input.width() == "default":
+                html_content = plot.to_html(full_html=False, auto_play=True, default_width='88vw', default_height='85vh', div_id='id_plot-container', animation_opts=animation_opts)
+            else:
+                html_content = plot.to_html(full_html=False, auto_play=True, default_width=int(input.width()), default_height=int(input.height()), div_id='id_plot-container', animation_opts=animation_opts)
             
             #print(type(html_content))
             # Replace "Times New Roman" with "Helvetica Neue LT Std 45 Light"
@@ -377,12 +401,13 @@ def server(input, output, session):
         return ui.HTML(generate_notes(x_var, y_var, datasource, x_log, y_log))
         
      
-    
+   
     # MP4 download handler
-    @session.download("download_mp4")
+    @render.download()
     def download_mp4():
         # Define the output file path for the MP4
         mp4_filename = "Co2_emissions" + str(time.time()) + ".mp4"
+        print(mp4_filename)
         
         with ui.Progress(max=100) as progress:
             plot = createCountryBubbleGraph(
@@ -408,12 +433,61 @@ def server(input, output, session):
                 progress=progress,
                 download="mp4",
                 filename=mp4_filename,
+                width=input.width(),
+                height=input.height(),
+                fps=input.fps(),
+                length=input.length(),
             )
             
         # Yield the file path for download
-        yield mp4_filename
+        return mp4_filename
         
         # Optionally, clean up by deleting the file after serving
-        os.remove(mp4_filename)
+        #os.remove(mp4_filename)
+        
+    
+    # MP4 download handler
+    @render.download()
+    def download_gif():
+        # Define the output file path for the MP4
+        gif_filename = "Co2_emissions" + str(time.time()) + ".gif"
+        print(gif_filename)
+        
+        with ui.Progress(max=100) as progress:
+            plot = createCountryBubbleGraph(
+                datasource=input.datasource(),
+                geographyLevel=input.geographyLevel(),
+                x_var=input.x_var(),
+                y_var=input.y_var(),
+                size_var=input.size_var(),
+                smoothness=input.smoothness(),
+                rolling_mean_years=input.rolling_mean_years(),
+                start_year=input.start_year(),
+                geography_list=input.geography_list(),
+                bubble_similarity=input.bubble_similarity(),
+                bubble_size=input.bubble_size(),
+                flag_size=input.flag_size(),
+                fixed_axes=input.fixed_axes(),
+                leave_trace=input.leave_trace(),
+                x_log=input.x_log(),
+                y_log=input.y_log(),
+                show_flags=input.show_flags(),
+                use_loess=input.use_loess(),
+                start_time=start_time,
+                progress=progress,
+                download="gif",
+                filename=gif_filename,
+                width=input.width(),
+                height=input.height(),
+                fps=input.fps(),
+                length=input.length(),
+            )
+            
+        # Yield the file path for download
+        return gif_filename
+        
+        # Optionally, clean up by deleting the file after serving
+        #os.remove(gif_filename)
+
 
 app = App(ui=app_ui, server=server) 
