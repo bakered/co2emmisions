@@ -9,13 +9,19 @@ Created on Sun Sep  8 06:59:49 2024
 print("starting app")
 
 from shiny import ui, render, App, reactive
-from .PlotlyPlot1 import createCountryBubbleGraph  # Import the function from the other file
+from PlotlyPlot1 import createCountryBubbleGraph  # Import the function from the other file
 import time
 # import asyncio
 import os
 from pathlib import Path
+#from guppy import hpy
+
+# Create a heap object to track memory usage
+#hp = hpy()
+
 
 start_time = time.time()
+print(hp.heap())
 
 #from shinywidgets import output_widget, render_widget  
 
@@ -332,6 +338,7 @@ def server(input, output, session):
     @reactive.event(input.plot_button, ignore_none=False)  # React to button click
     async def plot():
         with ui.Progress(max=100) as progress:
+           # print(hp.heap())
             plot = createCountryBubbleGraph(
                 datasource=input.datasource(),
                 geographyLevel=input.geographyLevel(),
@@ -362,17 +369,11 @@ def server(input, output, session):
             
             total_frames = (2022 - input.start_year())*input.smoothness()
             frame_duration = 1000*input.length() /  total_frames 
-            print("frames")
-            print(total_frames)
-            print(input.length())
-            print(frame_duration)
-           
-            
+
             # Generate the HTML string
             animation_opts = {'frame': {'duration': frame_duration, 'redraw': True},'transition': {'duration': 0}}
             
-            
-            print(input.width())
+
             if input.width() == "default":
                 html_content = plot.to_html(full_html=False, auto_play=True, default_width='88vw', default_height='85vh', div_id='id_plot-container', animation_opts=animation_opts)
             else:
@@ -406,6 +407,7 @@ def server(input, output, session):
     @render.download()
     def download_mp4():
         # Define the output file path for the MP4
+       # print(hp.heap())
         mp4_filename = "Co2_emissions" + str(time.time()) + ".mp4"
         print(mp4_filename)
         
@@ -448,6 +450,7 @@ def server(input, output, session):
     # MP4 download handler
     @render.download()
     def download_gif():
+       # print(hp.heap())
         # Define the output file path for the MP4
         gif_filename = "Co2_emissions" + str(time.time()) + ".gif"
         print(gif_filename)

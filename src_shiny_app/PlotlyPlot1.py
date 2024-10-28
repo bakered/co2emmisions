@@ -15,6 +15,11 @@ import io
 from PIL import Image
 import cv2
 
+#from guppy import hpy
+
+# Create a heap object to track memory usage
+#hp = hpy()
+
 def weighted_percentile(values, weights, percentile): #values = plot_df[y_var][index_max_y]; weights=plot_df['pop'][index_max_y]; percentile=95
     """Compute the weighted percentile of a given list of values."""
     # Convert values and weights to numpy arrays
@@ -461,7 +466,8 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         additional_cols = ['image_link', 'region1']
     else:
         additional_cols = ['image_link', 'region1']
-        
+       
+   # print(hp.heap())    
     plot_df = expand_dataframe(plot_df, 
                                n=smoothness, 
                                geography=geography, 
@@ -472,7 +478,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
                                normalised_size = 'normalised_size',
                                additional_cols = additional_cols
                                )
-    
+   # print(hp.heap())
     
     
     ########## CREATE SCATTER PLOT
@@ -498,6 +504,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         
         # Step 4: Concatenate the original DataFrame with the modified replicated DataFrame
         plot_df_scatter = pd.concat([plot_df_scatter, replicated_df], ignore_index=True)
+        replicated_df = None
 
         desired_order = region1s + [item + 'text' for item in region1s]
         desired_order = [category for category in desired_order if category in plot_df_scatter[colour_var].unique()]
@@ -519,7 +526,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             template="plotly_white",
             #trendline="lowess"
         )
-        
+        plot_df_scatter = None
         
 
         figScatter.update_traces(marker=dict(opacity=1))  # Set opacity to 0 for invisibility
@@ -558,6 +565,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         ordered_traces.append(trace)        
     # Update the figure with reordered traces
     figScatter.data = ordered_traces
+    ordered_traces = None
     #print(figScatter.data)
     
     figScatter.update_layout(
@@ -665,6 +673,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             # Append these rows to the list
             expanded_rows = pd.concat([expanded_rows, filtered_rows], axis=0, ignore_index=True)
         
+        plot_df_line = None
         
         
         #print(expanded_rows[expanded_rows['ISO3'] =="JPN"])
@@ -686,6 +695,8 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             animation_frame='year',
             template="plotly_white"
             )
+        expanded_rows=None
+        
         figLine.update_traces(line={'width': 5})
         figLine.update_traces(hoverinfo='skip', hovertemplate=None)
         figLine.update_traces(opacity=0.8)
@@ -733,7 +744,8 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         
     else:
         fig = figScatter
-    
+    figScatter = None
+    figLine = None
     
     ########## CHANGE CUSTOM SETTINGS
     progress.set(50, "custom settings...")
@@ -916,7 +928,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         else:
             frame.layout.annotations = (new_annotation,)
         
-        
+        new_annotation=None
 
 
 
@@ -1016,6 +1028,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
                           )
             
             frame.layout.images = image_annotations
+            image_annotations = None
             #print(frame.layout.images)
             
         now_time = time.time()
@@ -1023,7 +1036,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         progress.set(95, "printing plot...")
      
         
-    
+    plot_df = None
 
     ######## LABELS, AXES, AND SLIDER
     
@@ -1123,8 +1136,6 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
 
     
     if width != "default":
-        print(int(width))
-        print(int(height))
         fig.update_layout(width=int(width), height=int(height))
 
     
@@ -1134,32 +1145,28 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
     # print(fig.layout)
     
  #   print(fig.frames[1])
+   ## print(hp.heap())
     if download != "nothing":
    
         # Function to convert a Plotly figure to an image array
+        
         def plotly_fig2array(fig):
             fig_bytes = fig.to_image(format="png")
             buf = io.BytesIO(fig_bytes)
             img = Image.open(buf)
             return np.asarray(img)
         
-        # Extract the unique animation frame values from your figure
-        animation_frames = fig.frames
-        #print(fig.layout.updatemenus[0].buttons[0].visible=False)
-        
-        # Define the duration of the animation (in seconds)
         animation_duration = length  # seconds for the entire animation
-        #fps = 10  # Frames per second for the video
         
         # Function to update the figure for each frame and return an image array
         def make_frame(t):
             # Get the current frame based on time 't' (frames are sequentially spaced)
-            
-            current_frame = int(t * len(animation_frames)/animation_duration)  # Scales time 't' to the number of frames
-            if current_frame > len(animation_frames)-1:
-                current_frame = len(animation_frames)-1
-            frame_data = animation_frames[current_frame].data  # Get the current frame's data
-            frame_layout = animation_frames[current_frame].layout
+           # print(hp.heap())
+            current_frame = int(t * len(fig.frames)/animation_duration)  # Scales time 't' to the number of frames
+            if current_frame > len(fig.frames)-1:
+                current_frame = len(fig.frames)-1
+            frame_data = fig.frames[current_frame].data  # Get the current frame's data
+            frame_layout = fig.frames[current_frame].layout
             
             # Update the figure with the data of the current frame
             fig.update(data=frame_data, layout=frame_layout)
@@ -1173,6 +1180,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         
         # Create a MoviePy video clip using the `make_frame` function
         animation = mpy.VideoClip(make_frame, duration=animation_duration)
+        
         
         print(type(animation))
 
@@ -1191,6 +1199,8 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         # Define the video writer
         out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), fps, (frame_width, frame_height))
         
+       # print(hp.heap())
+        
         # Write each frame to the video file
         for i in range(int(animation.duration * fps)):  
             print(i)
@@ -1199,11 +1209,13 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         
         # Release the video writer
         out.release()
+       # print(hp.heap())
         
     if download=="gif":
         print("writing " + filename)
         # Write the animation to a GIF
         animation.write_gif(filename, fps=fps)
+       # print(hp.heap())
         
     if False:
         # write to video
