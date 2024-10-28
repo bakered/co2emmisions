@@ -1185,7 +1185,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         
         print(hp.heap())
         print("delete fig")
-        fig = None
+       # fig = None
         print(hp.heap())
         print(type(animation))
 
