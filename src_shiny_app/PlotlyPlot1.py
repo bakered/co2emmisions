@@ -15,10 +15,10 @@ import io
 from PIL import Image
 import cv2
 
-#from guppy import hpy
+from guppy import hpy
 
 # Create a heap object to track memory usage
-#hp = hpy()
+hp = hpy()
 
 def weighted_percentile(values, weights, percentile): #values = plot_df[y_var][index_max_y]; weights=plot_df['pop'][index_max_y]; percentile=95
     """Compute the weighted percentile of a given list of values."""
@@ -479,7 +479,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
                                additional_cols = additional_cols
                                )
    # print(hp.heap())
-    
+    print(hp.heap())
     
     ########## CREATE SCATTER PLOT
     if geographyLevel == "countries":
@@ -746,6 +746,8 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         fig = figScatter
     figScatter = None
     figLine = None
+    
+    print(hp.heap())
     
     ########## CHANGE CUSTOM SETTINGS
     progress.set(50, "custom settings...")
@@ -1147,7 +1149,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
  #   print(fig.frames[1])
    ## print(hp.heap())
     if download != "nothing":
-   
+        print(hp.heap())
         # Function to convert a Plotly figure to an image array
         
         def plotly_fig2array(fig):
@@ -1181,7 +1183,10 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         # Create a MoviePy video clip using the `make_frame` function
         animation = mpy.VideoClip(make_frame, duration=animation_duration)
         
-        
+        print(hp.heap())
+        print("delete fig")
+        fig = None
+        print(hp.heap())
         print(type(animation))
 
 
@@ -1199,7 +1204,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         # Define the video writer
         out = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'mp4v'), fps, (frame_width, frame_height))
         
-       # print(hp.heap())
+        print(hp.heap())
         
         # Write each frame to the video file
         for i in range(int(animation.duration * fps)):  
