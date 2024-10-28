@@ -9,4 +9,4 @@ statsmodels==0.14.1
 uvicorn==0.30.6
 kaleido==0.2.1
 opencv-python==4.10.0.84
-
+guppy3==3.1.4
