@@ -408,7 +408,7 @@ def server(input, output, session):
     def download_mp4():
         # Define the output file path for the MP4
        # print(hp.heap())
-        mp4_filename = "Co2_emissions" + str(time.time()) + ".mp4"
+        mp4_filename = "/tmp/Co2_emissions" + str(time.time()) + ".mp4"
         print(mp4_filename)
         
         with ui.Progress(max=100) as progress:
@@ -452,7 +452,7 @@ def server(input, output, session):
     def download_gif():
        # print(hp.heap())
         # Define the output file path for the MP4
-        gif_filename = "Co2_emissions" + str(time.time()) + ".gif"
+        gif_filename = "/tmp/Co2_emissions" + str(time.time()) + ".gif"
         print(gif_filename)
         
         with ui.Progress(max=100) as progress:

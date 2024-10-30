@@ -1206,6 +1206,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         
         print(hp.heap())
         
+        print("for loop")
         # Write each frame to the video file
         for i in range(int(animation.duration * fps)):  
             print(i)
