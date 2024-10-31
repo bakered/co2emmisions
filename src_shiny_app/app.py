@@ -406,6 +406,7 @@ def server(input, output, session):
     # MP4 download handler
     @render.download()
     def download_mp4():
+        print("xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx")
         # Define the output file path for the MP4
        # print(hp.heap())
         mp4_filename = "/tmp/Co2_emissions" + str(time.time()) + ".mp4"
