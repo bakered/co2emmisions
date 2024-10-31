@@ -1162,6 +1162,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
         
         # Function to update the figure for each frame and return an image array
         def make_frame(t):
+            print("t= " + str(t))
             # Get the current frame based on time 't' (frames are sequentially spaced)
            # print(hp.heap())
             current_frame = int(t * len(fig.frames)/animation_duration)  # Scales time 't' to the number of frames
@@ -1180,6 +1181,7 @@ def createCountryBubbleGraph(datasource="GCP and Maddison",
             # Convert the updated figure to an array (image) and return it
             return plotly_fig2array(fig)
         
+        print("attempt videoclip")
         # Create a MoviePy video clip using the `make_frame` function
         animation = mpy.VideoClip(make_frame, duration=animation_duration)
         
